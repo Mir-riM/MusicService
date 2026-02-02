@@ -1,0 +1,78 @@
+version: "3.8"
+
+services:
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: tatar-music-server
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - MONGO_DB_CONNECT_LINK=mongodb://root:61234094@mongodb/?appName=Cluster0
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=minioadmin
+      - S3_SECRET_KEY=minioadmin
+      - HOSTNAME=0.0.0.0
+      - JWT_SECRET=9f62947635419511562532415c031ca771992004ff24a1163eab228d9e7e6102d78a464d39b5c3896737b143bb7b432cbea85300f854cbd5aaf59a8c33142372
+      - REFRESH_TOKEN_EXPIRES_AT=30
+    networks:
+      - tatar-music-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:4000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=http://server:4000
+        - NEXT_PUBLIC_MINIO_URL=http://127.0.0.1:9000
+    container_name: tatar-music-client
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - NODE_ENV=production
+    depends_on:
+      - server
+    networks:
+      - tatar-music-network
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:latest
+    container_name: tatar-music-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=61234094
+    networks:
+      - tatar-music-network
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:RELEASE.2022-10-24T18-35-07Z
+    container_name: tatar-music-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    command: server /data --console-address ":9001"
+    networks:
+      - tatar-music-network
+    restart: unless-stopped
+
+networks:
+  tatar-music-network:
+    driver: bridge
