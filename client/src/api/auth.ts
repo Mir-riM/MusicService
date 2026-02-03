@@ -5,7 +5,7 @@ import { baseQueryWithReauth } from "./baseQueryReauth";
 export const authApi = createApi({
   reducerPath: "authApi",
   baseQuery: baseQueryWithReauth,
-  tagTypes: ["allTracks", "Track"],
+
   endpoints: (builder) => ({
     register: builder.mutation<IUser, { login: string; password: string }>({
       query: ({ login, password }) => {
@@ -28,7 +28,17 @@ export const authApi = createApi({
     me: builder.query<IUser, void>({
       query: () => "auth/me",
     }),
+    logout: builder.mutation<void, void>({
+      query: () => {
+        return { url: "auth/logout", method: "POST" };
+      },
+    }),
   }),
 });
 
-export const { useRegisterMutation, useLoginMutation, useMeQuery } = authApi;
+export const {
+  useRegisterMutation,
+  useLoginMutation,
+  useMeQuery,
+  useLogoutMutation,
+} = authApi;

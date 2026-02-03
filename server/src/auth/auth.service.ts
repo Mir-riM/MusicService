@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   HttpException,
   HttpStatus,
   Injectable,
@@ -34,53 +35,49 @@ export class AuthService {
     dto: AuthDto,
     req: Request,
   ): Promise<{ user: User; tokens: Tokens }> {
-    try {
-      const user = await this.userSchema.findOne({ login: dto.login });
+    const user = await this.userSchema.findOne({ login: dto.login });
 
-      if (!user) {
-        throw new HttpException(
-          'Неверный логин или пароль',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
-
-      const compareHash = await bcrypt.compare(dto.password, user.passwordHash);
-
-      if (!compareHash) {
-        throw new HttpException(
-          'Неверный логин или пароль',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
-
-      const refreshToken = crypto.randomBytes(64).toString('hex');
-      const refreshTokenHash = hashRefreshToken(refreshToken);
-
-      const expiresAt = new Date(
-        Date.now() +
-          Number(process.env.REFRESH_TOKEN_EXPIRES_AT) * 24 * 60 * 60 * 1000,
-      );
-
-      await this.refreshTokenSchema.create({
-        userId: user._id.toString(),
-        tokenHash: refreshTokenHash,
-        expiresAt: expiresAt,
-        userAgent: req.get('user-agent'),
-        revoked: false,
+    if (!user) {
+      throw new UnauthorizedException({
+        code: 'INVALID_CREDENTIALS',
+        message: 'Неверный логин или пароль',
       });
-
-      const accessToken = this.jwtAuthService.createAccessToken(
-        user.id,
-        user.roles,
-      );
-
-      return {
-        user,
-        tokens: { access: accessToken, refresh: refreshToken },
-      };
-    } catch (error) {
-      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
+
+    const compareHash = await bcrypt.compare(dto.password, user.passwordHash);
+
+    if (!compareHash) {
+      throw new UnauthorizedException({
+        code: 'INVALID_CREDENTIALS',
+        message: 'Неверный логин или пароль',
+      });
+    }
+
+    const refreshToken = crypto.randomBytes(64).toString('hex');
+    const refreshTokenHash = hashRefreshToken(refreshToken);
+
+    const expiresAt = new Date(
+      Date.now() +
+        Number(process.env.REFRESH_TOKEN_EXPIRES_AT) * 24 * 60 * 60 * 1000,
+    );
+
+    await this.refreshTokenSchema.create({
+      userId: user._id.toString(),
+      tokenHash: refreshTokenHash,
+      expiresAt: expiresAt,
+      userAgent: req.get('user-agent'),
+      revoked: false,
+    });
+
+    const accessToken = this.jwtAuthService.createAccessToken(
+      user.id,
+      user.roles,
+    );
+
+    return {
+      user,
+      tokens: { access: accessToken, refresh: refreshToken },
+    };
   }
 
   async register(
@@ -125,10 +122,13 @@ export class AuthService {
       };
     } catch (error) {
       if (error.code === 11000) {
-        throw new HttpException(
-          'Пользователь с таким логином уже существует',
-          HttpStatus.CONFLICT,
-        );
+        throw new ConflictException({
+          code: 'USER_ALREADY_EXISTS',
+          message: 'Пользователь с таким логином уже существует',
+          fields: {
+            login: 'Логин уже занят',
+          },
+        });
       }
 
       throw new HttpException(
@@ -138,75 +138,67 @@ export class AuthService {
     }
   }
   async refresh(refreshToken: string, req: Request): Promise<Tokens> {
-    try {
-      const refreshTokenHash = hashRefreshToken(refreshToken);
+    const refreshTokenHash = hashRefreshToken(refreshToken);
 
-      const storedToken = await this.refreshTokenSchema.findOne({
-        tokenHash: refreshTokenHash,
-        revoked: false,
-      });
+    const storedToken = await this.refreshTokenSchema.findOne({
+      tokenHash: refreshTokenHash,
+      revoked: false,
+    });
 
-      if (!storedToken) {
-        throw new UnauthorizedException();
-      }
-
-      if (storedToken.expiresAt < new Date()) {
-        throw new UnauthorizedException();
-      }
-
-      if (storedToken.userAgent !== req.get('user-agent')) {
-        throw new UnauthorizedException();
-      }
-
-      const user = await this.userSchema.findById(storedToken.userId);
-
-      if (!user) {
-        throw new UnauthorizedException();
-      }
-
-      storedToken.revoked = true;
-
-      await storedToken.save();
-
-      const newRefreshToken = crypto.randomBytes(64).toString('hex');
-      const newRefreshTokenHash = hashRefreshToken(newRefreshToken);
-
-      await this.refreshTokenSchema.create({
-        userId: user._id.toString(),
-        tokenHash: newRefreshTokenHash,
-        expiresAt: new Date(
-          Date.now() +
-            Number(process.env.REFRESH_TOKEN_EXPIRES_AT) * 24 * 60 * 60 * 1000,
-        ),
-        userAgent: req.get('user-agent'),
-        revoked: false,
-      });
-
-      const accessToken = this.jwtAuthService.createAccessToken(
-        user.id,
-        user.roles,
-      );
-
-      return {
-        access: accessToken,
-        refresh: newRefreshToken,
-      };
-    } catch (error) {
-      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+    if (!storedToken) {
+      throw new UnauthorizedException();
     }
+
+    if (storedToken.expiresAt < new Date()) {
+      throw new UnauthorizedException();
+    }
+
+    if (storedToken.userAgent !== req.get('user-agent')) {
+      throw new UnauthorizedException();
+    }
+
+    const user = await this.userSchema.findById(storedToken.userId);
+
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+
+    storedToken.revoked = true;
+
+    await storedToken.save();
+
+    const newRefreshToken = crypto.randomBytes(64).toString('hex');
+    const newRefreshTokenHash = hashRefreshToken(newRefreshToken);
+
+    await this.refreshTokenSchema.create({
+      userId: user._id.toString(),
+      tokenHash: newRefreshTokenHash,
+      expiresAt: new Date(
+        Date.now() +
+          Number(process.env.REFRESH_TOKEN_EXPIRES_AT) * 24 * 60 * 60 * 1000,
+      ),
+      userAgent: req.get('user-agent'),
+      revoked: false,
+    });
+
+    const accessToken = this.jwtAuthService.createAccessToken(
+      user.id,
+      user.roles,
+    );
+
+    return {
+      access: accessToken,
+      refresh: newRefreshToken,
+    };
   }
 
   async me(userId: string): Promise<User> {
-    try {
-      const user = await this.userSchema.findById(userId);
+    const user = await this.userSchema.findById(userId);
 
-      if (!user) {
-        throw new UnauthorizedException();
-      }
-
-      return user;
-    } catch (error) {
-      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+    if (!user) {
+      throw new UnauthorizedException();
     }
+
+    return user;
   }
 }

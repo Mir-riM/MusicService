@@ -15,7 +15,7 @@ import { createTrackDto, MulterFile } from './dto/create-track.dto';
 import type { ObjectId } from 'mongoose';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import { JwtAuthGuard } from '../guards/auth.guard';
+import { JwtAuthGuard } from '../common/guards/auth.guard';
 
 @Controller('/tracks')
 export class TrackController {

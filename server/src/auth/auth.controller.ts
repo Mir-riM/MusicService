@@ -11,7 +11,7 @@ import {
 import { AuthService } from './auth.service';
 import { AuthDto, RegisterDto } from './dto/auth.dto';
 import type { Request, Response } from 'express';
-import { JwtAuthGuard } from '../guards/auth.guard';
+import { JwtAuthGuard } from '../common/guards/auth.guard';
 import { JwtPayload } from '../jwt/types/jwtPayload';
 
 export interface AuthRequest extends Request {
@@ -72,8 +72,6 @@ export class AuthController {
   async access(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const refreshToken = req.cookies?.refreshToken;
 
-    console.log(refreshToken);
-
     if (!refreshToken) {
       throw new UnauthorizedException();
     }
@@ -103,8 +101,9 @@ export class AuthController {
   }
 
   @Post('/logout')
-  async logout(@Res() res: Response) {
+  async logout(@Res({ passthrough: true }) res: Response) {
     res.clearCookie('refreshToken');
     res.clearCookie('jwtAccessToken');
+    res.status(200)
   }
 }

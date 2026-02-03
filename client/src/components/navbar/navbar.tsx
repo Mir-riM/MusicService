@@ -22,6 +22,7 @@ import { ICONS } from "../icon/icon-registry";
 import { useAppDispatch, useAppSelector } from "../../hooks/store";
 import { Divider } from "@mui/material";
 import { logout } from "../../store/slices/auth";
+import { useLogoutMutation } from "../../api/auth";
 
 const drawerWidth = 240;
 
@@ -81,6 +82,12 @@ export default function Navbar() {
   const handleDrawerClose = () => {
     setOpen(false);
   };
+
+  const [logoutQuery] = useLogoutMutation();
+
+  async function logoutRequest() {
+    await logoutQuery().unwrap();
+  }
 
   return (
     <Box sx={{ display: "flex" }}>
@@ -150,6 +157,7 @@ export default function Navbar() {
             <ListItem
               onClick={() => {
                 dispatch(logout());
+                logoutRequest();
                 router.push("/auth");
               }}
               disablePadding
