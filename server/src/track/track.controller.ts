@@ -24,16 +24,23 @@ export class TrackController {
   @UseGuards(JwtAuthGuard)
   @Post()
   @UseInterceptors(
-    FileFieldsInterceptor([
+    FileFieldsInterceptor(
+      [
+        {
+          name: 'picture',
+          maxCount: 1,
+        },
+        {
+          name: 'track',
+          maxCount: 1,
+        },
+      ],
       {
-        name: 'picture',
-        maxCount: 1,
+        limits: {
+          fileSize: 100 * 1024 * 1024, // 100MB
+        },
       },
-      {
-        name: 'track',
-        maxCount: 1,
-      },
-    ]),
+    ),
   )
   create(
     @UploadedFiles()

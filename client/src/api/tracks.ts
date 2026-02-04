@@ -18,26 +18,8 @@ export const tracksApi = createApi({
     getTracksBySearch: builder.query<ITrack[], string>({
       query: (query) => `/tracks/search?query=${query}`,
     }),
-    createTrack: builder.mutation<
-      ITrack,
-      {
-        name: string;
-        author: string;
-        text: string;
-        track: File | null;
-        picture: File | null;
-      }
-    >({
-      query: ({ name, author, text, track, picture }) => {
-        const formData = new FormData();
-
-        formData.append("name", name);
-        formData.append("author", author);
-        formData.append("text", text);
-
-        if (track) formData.append("track", track);
-        if (picture) formData.append("picture", picture);
-
+    createTrack: builder.mutation<ITrack, FormData>({
+      query: (formData) => {
         return {
           url: "/tracks",
           method: "POST",

@@ -7,41 +7,45 @@ import FileUpload from "../../../components/file-upload/file-upload";
 import { useCreateTrackMutation } from "../../../api/tracks";
 import { useRouter } from "next/navigation";
 import { AuthGuard } from "../../../guards/authGuard";
+import { Controller, useForm } from "react-hook-form";
+import { CreateTrackForm, stepSchemas } from "./createTrackFrom";
 
 const CreateTrack = () => {
   const router = useRouter();
-  const [trackInfo, setTrackInfo] = useState({
-    name: "",
-    author: "",
-    text: "",
+
+  const form = useForm<CreateTrackForm>({
+    defaultValues: {
+      name: "",
+      author: "",
+      text: "",
+      picture: null,
+      track: null,
+    },
+    mode: "onChange",
   });
+
   const [activeStep, setActiveStep] = useState(0);
-  const [picture, setPicture] = useState<File | null>(null);
-  const [track, setTrack] = useState<File | null>(null);
   const maxStep = 2;
 
   const [createTrack, { isLoading, error }] = useCreateTrackMutation();
 
   async function next() {
-    if (activeStep !== maxStep) {
-      setActiveStep((prev) => prev + 1);
-    } else {
-      try {
-        if (track) {
-          const createdTrack = await createTrack({
-            name: trackInfo.name,
-            author: trackInfo.author,
-            text: trackInfo.text,
-            track,
-            picture,
-          }).unwrap();
+    const schema = stepSchemas[activeStep];
+    const values = form.getValues();
 
-          router.push(`/tracks/${createdTrack._id}`);
-        }
-      } catch (err) {
-        console.error("Ошибка создания трека", err);
-      }
+    const result = schema.safeParse(values);
+
+    if (!result.success) {
+      result.error.issues.forEach((issue) => {
+        form.setError(issue.path[0] as any, {
+          type: "manual",
+          message: issue.message,
+        });
+      });
+      return;
     }
+
+    setActiveStep((s) => s + 1);
   }
 
   function prev() {
@@ -50,6 +54,19 @@ const CreateTrack = () => {
     } else {
       setActiveStep(0);
     }
+  }
+
+  async function onSubmit(data: CreateTrackForm) {
+    const formData = new FormData();
+
+    formData.append("name", data.name);
+    formData.append("author", data.author);
+    if (data.text) formData.append("text", data.text);
+    if (data.picture) formData.append("picture", data.picture);
+    if (data.track) formData.append("track", data.track);
+
+    const created = await createTrack(formData).unwrap();
+    router.push(`/tracks/${created._id}`);
   }
 
   return (
@@ -73,65 +90,98 @@ const CreateTrack = () => {
               <div className="flex flex-col gap-4">
                 <TextField
                   placeholder="Название трека"
-                  value={trackInfo.name}
-                  onChange={(e) =>
-                    setTrackInfo({ ...trackInfo, name: e.target.value })
-                  }
+                  {...form.register("name")}
+                  error={!!form.formState.errors.name}
+                  helperText={form.formState.errors.name?.message}
                 />
                 <TextField
                   placeholder="Имя автора"
-                  value={trackInfo.author}
-                  onChange={(e) =>
-                    setTrackInfo({ ...trackInfo, author: e.target.value })
-                  }
+                  {...form.register("author")}
+                  error={!!form.formState.errors.author}
+                  helperText={form.formState.errors.author?.message}
                 />
                 <TextField
                   placeholder="Текст трека"
-                  value={trackInfo.text}
-                  onChange={(e) =>
-                    setTrackInfo({ ...trackInfo, text: e.target.value })
-                  }
+                  {...form.register("text")}
+                  error={!!form.formState.errors.text}
+                  helperText={form.formState.errors.text?.message}
+                  multiline
+                  rows={3}
                 />
               </div>
             </Card>
           )}
           {activeStep === 1 && (
-            <div className="text-center">
-              {picture && (
-                <div>
-                  <img
-                    className="mx-auto size-32 object-contain"
-                    src={URL.createObjectURL(picture)}
-                    alt="Обложка трека"
-                  />
-                  <p className="text-xs my-5">Загружен файл: {picture.name}</p>
+            <Controller
+              control={form.control}
+              name="picture"
+              render={({ field }) => (
+                <div className="text-center">
+                  {field.value && (
+                    <div>
+                      <img
+                        className="mx-auto size-32 object-contain"
+                        src={URL.createObjectURL(field.value)}
+                        alt="Обложка трека"
+                      />
+                      <p className="text-xs my-5">
+                        Загружен файл: {field.value.name}
+                      </p>
+                    </div>
+                  )}
+
+                  <FileUpload
+                    accept="image/*"
+                    value={field.value}
+                    onChange={field.onChange}
+                  >
+                    <Button>
+                      {field.value ? "Обновить обложку" : "Загрузить обложку"}
+                    </Button>
+                  </FileUpload>
                 </div>
               )}
-              <FileUpload setFile={setPicture} accept={"image/*"}>
-                <Button>
-                  {picture ? "Обновить обложку" : "Загрузить обложку"}
-                </Button>
-              </FileUpload>
-            </div>
+            />
           )}
           {activeStep === 2 && (
-            <div className="text-center">
-              {track && (
-                <div>
-                  <p className="text-xs my-5">Загружен файл: {track.name}</p>
+            <Controller
+              control={form.control}
+              name="track"
+              render={({ field }) => (
+                <div className="text-center">
+                  {field.value && (
+                    <div>
+                      <p className="text-xs my-5">
+                        Загружен файл: {field.value.name}
+                      </p>
+                    </div>
+                  )}
+
+                  <FileUpload
+                    value={field.value}
+                    onChange={field.onChange}
+                    accept={"audio/*"}
+                  >
+                    <Button>
+                      {field.value ? "Обновить трек" : "Загрузить трек"}
+                    </Button>
+                  </FileUpload>
                 </div>
               )}
-              <FileUpload setFile={setTrack} accept={"audio/*"}>
-                <Button>{track ? "Обновить трек" : "Загрузить трек"}</Button>
-              </FileUpload>
-            </div>
+            />
           )}
         </StepWrapper>
         <Grid className="w-full text-center mt-10">
           <Button disabled={activeStep === 0} onClick={() => prev()}>
             Назад
           </Button>
-          <Button onClick={() => next()}>Далее</Button>
+          <Button
+            onClick={
+              activeStep === maxStep ? form.handleSubmit(onSubmit) : next
+            }
+          >
+            {activeStep === maxStep ? "Создать" : "Далее"}
+          </Button>
         </Grid>
       </MainLayout>
     </AuthGuard>
