@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { IUser } from "../../types/entries/user";
+import { RootState } from "..";
 
 type AuthState = {
   user: IUser | null;
@@ -25,6 +26,11 @@ const authSlice = createSlice({
     },
   },
 });
+
+export const selectIsAuth = (state: RootState) =>
+  state.auth.initialized && !!state.auth.user;
+export const selectAuthInitialized = (state: RootState) =>
+  state.auth.initialized;
 
 export const { setUserState, logout } = authSlice.actions;
 export default authSlice.reducer;
