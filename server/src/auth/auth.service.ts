@@ -25,9 +25,9 @@ export type Tokens = {
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectModel(User.name) private userSchema: Model<UserDocument>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(RefreshToken.name)
-    private refreshTokenSchema: Model<RefreshTokenDocument>,
+    private refreshTokenModel: Model<RefreshTokenDocument>,
     private jwtAuthService: JwtAuthService,
   ) {}
 
@@ -35,7 +35,7 @@ export class AuthService {
     dto: AuthDto,
     req: Request,
   ): Promise<{ user: User; tokens: Tokens }> {
-    const user = await this.userSchema.findOne({ login: dto.login });
+    const user = await this.userModel.findOne({ login: dto.login });
 
     if (!user) {
       throw new UnauthorizedException({
@@ -61,7 +61,7 @@ export class AuthService {
         Number(process.env.REFRESH_TOKEN_EXPIRES_AT) * 24 * 60 * 60 * 1000,
     );
 
-    await this.refreshTokenSchema.create({
+    await this.refreshTokenModel.create({
       userId: user._id.toString(),
       tokenHash: refreshTokenHash,
       expiresAt: expiresAt,
@@ -97,7 +97,7 @@ export class AuthService {
           Number(process.env.REFRESH_TOKEN_EXPIRES_AT) * 24 * 60 * 60 * 1000,
       );
 
-      await this.refreshTokenSchema.create({
+      await this.refreshTokenModel.create({
         userId: newUserId,
         tokenHash: refreshTokenHash,
         expiresAt: expiresAt,
@@ -110,7 +110,7 @@ export class AuthService {
         newUserRole,
       );
 
-      const user = await this.userSchema.create({
+      const user = await this.userModel.create({
         login: dto.login,
         passwordHash,
         roles: newUserRole,
@@ -140,7 +140,7 @@ export class AuthService {
   async refresh(refreshToken: string, req: Request): Promise<Tokens> {
     const refreshTokenHash = hashRefreshToken(refreshToken);
 
-    const storedToken = await this.refreshTokenSchema.findOne({
+    const storedToken = await this.refreshTokenModel.findOne({
       tokenHash: refreshTokenHash,
       revoked: false,
     });
@@ -157,7 +157,7 @@ export class AuthService {
       throw new UnauthorizedException();
     }
 
-    const user = await this.userSchema.findById(storedToken.userId);
+    const user = await this.userModel.findById(storedToken.userId);
 
     if (!user) {
       throw new UnauthorizedException();
@@ -170,7 +170,7 @@ export class AuthService {
     const newRefreshToken = crypto.randomBytes(64).toString('hex');
     const newRefreshTokenHash = hashRefreshToken(newRefreshToken);
 
-    await this.refreshTokenSchema.create({
+    await this.refreshTokenModel.create({
       userId: user._id.toString(),
       tokenHash: newRefreshTokenHash,
       expiresAt: new Date(
@@ -193,7 +193,7 @@ export class AuthService {
   }
 
   async me(userId: string): Promise<User> {
-    const user = await this.userSchema.findById(userId);
+    const user = await this.userModel.findById(userId);
 
     if (!user) {
       throw new UnauthorizedException();

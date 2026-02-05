@@ -1,6 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Playlist, PlaylistDocument } from './schemas/playlist.schema';
+import {
+  Playlist,
+  PlaylistDocument,
+  PlaylistType,
+} from './schemas/playlist.schema';
 import { Model } from 'mongoose';
 import { CreatePlaylistDto } from './dto/createPlaylist.dto';
 import { PlaylistTracks } from './schemas/playlistTracks.schema';
@@ -8,6 +12,7 @@ import { PlaylistSubscription } from './schemas/playlistSubscription.schema';
 import { AddTrackToPlaylistDto } from './dto/addTrackToPlaylist.dto';
 import { SubscribeOnPlaylistDto } from './dto/subscribeOnPlaylist.dto';
 import { UnsubscribeOnPlaylistDto } from './dto/unsubscribe.dto';
+import { forkDto } from './dto/fork.dto';
 
 export interface PlaylistWithTracks extends Playlist {
   tracks: PlaylistTracks[];
@@ -16,17 +21,17 @@ export interface PlaylistWithTracks extends Playlist {
 @Injectable()
 export class PlaylistsService {
   constructor(
-    @InjectModel(Playlist.name) private playlistSchema: Model<PlaylistDocument>,
+    @InjectModel(Playlist.name) private playlistModel: Model<PlaylistDocument>,
     @InjectModel(PlaylistTracks.name)
-    private playlistTrackSchema: Model<PlaylistTracks>,
+    private playlistTrackModel: Model<PlaylistTracks>,
     @InjectModel(PlaylistSubscription.name)
-    private playlistSubscriberSchema: Model<PlaylistSubscription>,
+    private playlistSubscriberModel: Model<PlaylistSubscription>,
   ) {}
 
   async create(dto: CreatePlaylistDto): Promise<Playlist> {
-    const playlist = await this.playlistSchema.create(dto);
+    const playlist = await this.playlistModel.create(dto);
 
-    await this.playlistSubscriberSchema.create({
+    await this.playlistSubscriberModel.create({
       userId: dto.ownerId,
       playlistId: playlist._id.toString(),
     });
@@ -35,11 +40,9 @@ export class PlaylistsService {
   }
 
   async getOne(id: string): Promise<PlaylistWithTracks> {
-    const playlist = await this.playlistSchema.findById(id);
+    const playlist = await this.playlistModel.findById(id);
 
-    console.log('Playlist id:', id);
-
-    const playlistTracks = await this.playlistTrackSchema
+    const playlistTracks = await this.playlistTrackModel
       .find({ playlistId: id })
       .sort({ position: 1 })
       .populate('trackId');
@@ -52,7 +55,7 @@ export class PlaylistsService {
   }
 
   async getPlaylistsBySubscriber(userId: string): Promise<Playlist[]> {
-    const playlistSubscriptions = await this.playlistSubscriberSchema.find({
+    const playlistSubscriptions = await this.playlistSubscriberModel.find({
       userId,
     });
 
@@ -60,7 +63,7 @@ export class PlaylistsService {
 
     const playlistIds = playlistSubscriptions.map((ps) => ps.playlistId);
 
-    const playlists = await this.playlistSchema.find({
+    const playlists = await this.playlistModel.find({
       _id: { $in: playlistIds },
     });
 
@@ -70,9 +73,9 @@ export class PlaylistsService {
   async addTrackToPlaylist(
     dto: AddTrackToPlaylistDto,
   ): Promise<PlaylistWithTracks> {
-    const playlist = await this.playlistSchema.findById(dto.playlistId);
+    const playlist = await this.playlistModel.findById(dto.playlistId);
 
-    const playlistTracks = await this.playlistTrackSchema
+    const playlistTracks = await this.playlistTrackModel
       .find({ playlistId: dto.playlistId })
       .sort({ position: 1 })
       .populate('trackId');
@@ -81,7 +84,7 @@ export class PlaylistsService {
       throw new NotFoundException('Playlist not found');
     }
 
-    await this.playlistTrackSchema.create(dto, {
+    await this.playlistTrackModel.create(dto, {
       position: playlistTracks.length + 1,
     });
 
@@ -89,7 +92,7 @@ export class PlaylistsService {
   }
 
   async subscribe(dto: SubscribeOnPlaylistDto): Promise<void> {
-    const existingSubscription = await this.playlistSubscriberSchema.findOne({
+    const existingSubscription = await this.playlistSubscriberModel.findOne({
       userId: dto.userId,
       playlistId: dto.playlistId,
     });
@@ -98,33 +101,69 @@ export class PlaylistsService {
       throw new Error('Already subscribed');
     }
 
-    await this.playlistSubscriberSchema.create(dto);
+    await this.playlistSubscriberModel.create(dto);
   }
 
   async unsubscribe(dto: UnsubscribeOnPlaylistDto) {
-    const playlist = await this.playlistSchema.findById(dto.userId);
+    const playlist = await this.playlistModel.findById(dto.userId);
 
     if (!playlist) {
       throw new NotFoundException('Playlist not found');
     }
 
-    const playlistSubscribers = await this.playlistSubscriberSchema.find({
+    const playlistSubscribers = await this.playlistSubscriberModel.find({
       playlistId: dto.playlistId,
     });
 
     if (playlistSubscribers.length === 1) {
-      await this.playlistSubscriberSchema.deleteMany({
+      await this.playlistSubscriberModel.deleteMany({
         playlistId: dto.playlistId,
       });
-      await this.playlistTrackSchema.deleteMany({ playlistId: dto.playlistId });
-      await this.playlistSchema.findByIdAndDelete(dto.playlistId);
+      await this.playlistTrackModel.deleteMany({ playlistId: dto.playlistId });
+      await this.playlistModel.findByIdAndDelete(dto.playlistId);
     }
 
     if (playlistSubscribers.length > 1) {
-      await this.playlistSubscriberSchema.deleteOne({
+      await this.playlistSubscriberModel.deleteOne({
         playlistId: dto.playlistId,
         userId: dto.userId,
       });
     }
+  }
+  async fork(dto: forkDto) {
+    const originPlaylist = await this.playlistModel.findById(dto.playlistId);
+
+    if (!originPlaylist) {
+      throw new NotFoundException('Not found origin playlist');
+    }
+
+    const originPlaylistTracks = await this.playlistTrackModel.find({
+      playlistId: dto.playlistId,
+    });
+
+    const forkPlaylist = await this.playlistModel.create({
+      isPublic: originPlaylist.isPublic,
+      name: `Fork ${originPlaylist.name}`,
+      type: PlaylistType.FORK,
+      ownerId: dto.userId,
+      originalPlaylistId: dto.playlistId,
+    });
+
+    await this.playlistSubscriberModel.create({
+      playlistId: forkPlaylist._id.toString(),
+      userId: dto.userId,
+    });
+
+    if (originPlaylistTracks.length) {
+      await this.playlistTrackModel.insertMany(
+        originPlaylistTracks.map((t) => ({
+          playlistId: forkPlaylist._id.toString(),
+          trackId: t.trackId,
+          position: t.position,
+        })),
+      );
+    }
+
+    return forkPlaylist;
   }
 }
