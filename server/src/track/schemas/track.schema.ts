@@ -3,7 +3,7 @@ import mongoose, { HydratedDocument, Types } from 'mongoose';
 
 export type TrackDocument = HydratedDocument<Track>;
 
-@Schema()
+@Schema({ timestamps: true })
 export class Track {
   @Prop({ required: true })
   name: string;
