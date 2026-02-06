@@ -1,3 +1,4 @@
+"use client";
 import { useRouter } from "next/navigation";
 import { useSnackbar } from "notistack";
 import { useRef, useEffect } from "react";

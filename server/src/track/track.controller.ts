@@ -11,11 +11,12 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { TrackService } from './track.service';
-import { createTrackDto, MulterFile } from './dto/create-track.dto';
+import { createTrackDto, MulterFile } from './dto/createTrack.dto';
 import type { ObjectId } from 'mongoose';
-import { CreateCommentDto } from './dto/create-comment.dto';
+import { CreateCommentDto } from './dto/createComment.dto';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../common/guards/auth.guard';
+import type { TrackLikeDto } from './dto/trackLike.dto';
 
 @Controller('/tracks')
 export class TrackController {
@@ -87,5 +88,17 @@ export class TrackController {
   @Post(':id')
   listen(@Param('id') trackId: string) {
     return this.trackService.listen(trackId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('/likes/:userId')
+  async getLikes(@Param('userId') userId: string) {
+    return await this.trackService.getLikes(userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('/like')
+  async like(@Body() dto: TrackLikeDto) {
+    return await this.trackService.toggleLike(dto);
   }
 }

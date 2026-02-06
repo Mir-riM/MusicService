@@ -3,16 +3,19 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Track, TrackDocument } from './schemas/track.schema';
 import { Comment, CommentDocument } from './schemas/comment.schema';
 import { Model, ObjectId } from 'mongoose';
-import { createTrackDto, MulterFile } from './dto/create-track.dto';
-import { CreateCommentDto } from './dto/create-comment.dto';
+import { createTrackDto, MulterFile } from './dto/createTrack.dto';
+import { CreateCommentDto } from './dto/createComment.dto';
 import { MinioService } from '../minio/minio.service';
 import { MinioBucket } from '../minio/types/minio';
+import { TrackLikeDto } from './dto/trackLike.dto';
+import { TrackLike } from './schemas/trackLike.schema';
 
 @Injectable()
 export class TrackService {
   constructor(
     @InjectModel(Track.name) private trackModel: Model<TrackDocument>,
     @InjectModel(Comment.name) private commentModel: Model<CommentDocument>,
+    @InjectModel(TrackLike.name) private trackLikeModel: Model<TrackLike>,
     private minioService: MinioService,
   ) {}
 
@@ -85,5 +88,24 @@ export class TrackService {
     });
 
     return tracks;
+  }
+
+  async toggleLike(dto: TrackLikeDto): Promise<TrackLike[]> {
+    const existingLike = await this.trackLikeModel.findOne({
+      userId: dto.userId,
+      trackId: dto.trackId,
+    });
+    if (existingLike) {
+      await this.trackLikeModel.deleteOne({
+        userId: dto.userId,
+        trackId: dto.trackId,
+      });
+    } else {
+      await this.trackLikeModel.create(dto);
+    }
+    return await this.trackLikeModel.find({ trackId: dto.trackId });
+  }
+  async getLikes(userId: string): Promise<TrackLike[]> {
+    return await this.trackLikeModel.find({ userId });
   }
 }

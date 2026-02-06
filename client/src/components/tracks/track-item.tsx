@@ -1,7 +1,6 @@
-import { Card, Grid } from "@mui/material";
+import { Card } from "@mui/material";
 import { ITrack } from "../../types/entries/track";
 import { Pause, PlayArrow } from "@mui/icons-material";
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   pauseTrack,

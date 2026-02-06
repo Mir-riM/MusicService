@@ -47,8 +47,6 @@ export class PlaylistsController {
   @UseGuards(JwtAuthGuard)
   @Post('/fork')
   async fork(@Body() dto: forkDto) {
-    console.log('fork');
-
     return this.playlistsService.fork(dto);
   }
 

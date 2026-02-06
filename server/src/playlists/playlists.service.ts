@@ -45,7 +45,7 @@ export class PlaylistsService {
     const playlistTracks = await this.playlistTrackModel
       .find({ playlistId: id })
       .sort({ position: 1 })
-      .populate('trackId');
+      .populate('track');
 
     if (!playlist) {
       throw new NotFoundException('Playlist not found');
@@ -58,8 +58,6 @@ export class PlaylistsService {
     const playlistSubscriptions = await this.playlistSubscriberModel.find({
       userId,
     });
-
-    console.log(userId, playlistSubscriptions);
 
     const playlistIds = playlistSubscriptions.map((ps) => ps.playlistId);
 
@@ -78,7 +76,7 @@ export class PlaylistsService {
     const playlistTracks = await this.playlistTrackModel
       .find({ playlistId: dto.playlistId })
       .sort({ position: 1 })
-      .populate('trackId');
+      .populate('track');
 
     if (!playlist) {
       throw new NotFoundException('Playlist not found');

@@ -13,8 +13,6 @@ export type PlaylistDocument = HydratedDocument<Playlist>;
 export class Playlist {
   @Prop({ required: true })
   name: string;
-  @Prop({ required: true })
-  isPublic: boolean;
   @Prop({
     required: true,
     type: String,
@@ -26,6 +24,10 @@ export class Playlist {
   ownerId: mongoose.Types.ObjectId;
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Playlist' })
   originalPlaylistId?: mongoose.Types.ObjectId;
+  @Prop()
+  pictureUrl: string;
+  @Prop({ required: true })
+  isPublic: boolean;
 }
 
 export const PlaylistSchema = SchemaFactory.createForClass(Playlist);

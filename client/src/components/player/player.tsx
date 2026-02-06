@@ -58,8 +58,21 @@ const Player: React.FC = () => {
     }
   }, [isPaused]);
 
+  // todo: потом сделать проверку есть ли следующий трек, если есть - переключать на него
+  useEffect(() => {
+    if (currentTime === duration || currentTime > duration) {
+      dispatch(pauseTrack());
+      dispatch(setCurrentTimeTrack(0));
+      track?.pause();
+      track!.currentTime = 0;
+    }
+  }, [currentTime, duration]);
+
   function trackStatusToggle() {
-    if (isPaused) {
+    if (isPaused && duration === currentTime) {
+      dispatch(playTrack());
+      track?.play();
+    } else if (isPaused) {
       dispatch(playTrack());
       track?.play();
     } else {

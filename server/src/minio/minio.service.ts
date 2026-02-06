@@ -5,7 +5,7 @@ import {
 } from '@aws-sdk/client-s3';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { MinioBucket } from './types/minio';
-import { MulterFile } from '../track/dto/create-track.dto';
+import { MulterFile } from '../track/dto/createTrack.dto';
 import * as uuid from 'uuid';
 
 @Injectable()
@@ -38,10 +38,7 @@ export class MinioService {
       const filePath = `${bucket}/${fileName}`;
       return filePath;
     } catch (error) {
-      throw new HttpException(
-        error.message,
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 

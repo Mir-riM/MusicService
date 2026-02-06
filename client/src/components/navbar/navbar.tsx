@@ -34,6 +34,7 @@ const menuItems: { name: string; path: string; icon: keyof typeof ICONS }[] = [
   { name: "Главная", path: "/", icon: "Home" },
   { name: "Треки", path: "/tracks", icon: "MusicNote" },
   { name: "Добавить трек", path: "/tracks/create", icon: "PlaylistAdd" },
+  { name: "Коллекции", path: "/collection", icon: "User" },
 ];
 
 const AppBar = styled(MuiAppBar, {

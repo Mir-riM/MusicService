@@ -41,6 +41,7 @@ export const tracksApi = createApi({
       },
       invalidatesTags: ["Track"],
     }),
+    // todo: сделать лайки\дизлайки треков и вывод лайкнутых треков с кешированием в store без постоянных запросов к серверу
   }),
 });
 

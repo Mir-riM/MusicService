@@ -14,3 +14,9 @@ export interface IComment {
   username: string;
   text: string;
 }
+
+export interface ITrackLike {
+  _id: string;
+  userId: string;
+  trackId: string;
+}

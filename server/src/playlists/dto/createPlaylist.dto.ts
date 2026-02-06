@@ -6,4 +6,5 @@ export class CreatePlaylistDto {
   type: PlaylistType;
   ownerId: string;
   originalPlaylistId?: string;
+  pictureUrl: string;
 }
