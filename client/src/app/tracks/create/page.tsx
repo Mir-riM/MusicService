@@ -18,8 +18,8 @@ const CreateTrack = () => {
       name: "",
       author: "",
       text: "",
-      picture: null,
-      track: null,
+      picture: undefined,
+      track: undefined,
     },
     mode: "onChange",
   });

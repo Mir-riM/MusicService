@@ -2,8 +2,8 @@ export type CreateTrackForm = {
   name: string;
   author: string;
   text?: string;
-  picture: File | null;
-  track: File | null;
+  picture: File | undefined;
+  track: File | undefined;
 };
 
 import { z } from "zod";

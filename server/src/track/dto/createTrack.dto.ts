@@ -1,7 +1,7 @@
 export class createTrackDto {
-  readonly name: string;
-  readonly author: string;
-  readonly text: string;
+  name: string;
+  author: string;
+  text: string;
 }
 
 export interface MulterFile {

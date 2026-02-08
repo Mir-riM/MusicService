@@ -11,6 +11,7 @@ import {
   PlaylistSubscription,
   PlaylistSubscriptionSchema,
 } from './schemas/playlistSubscription.schema';
+import { MinioModule } from '../minio/minio.module';
 
 @Module({
   controllers: [PlaylistsController],
@@ -21,6 +22,7 @@ import {
       { name: PlaylistTracks.name, schema: PlaylistTracksSchema },
       { name: PlaylistSubscription.name, schema: PlaylistSubscriptionSchema },
     ]),
+    MinioModule,
   ],
 })
-export class PlaylistsModule { }
+export class PlaylistsModule {}

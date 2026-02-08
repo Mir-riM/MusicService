@@ -1,49 +1,306 @@
 "use client";
-import { MusicNote } from "@mui/icons-material";
-import { useGetUserPlaylistsWithTracksQuery } from "../../../api/playlists";
+
+import {
+  Edit,
+  ForkLeft,
+  MusicNote,
+  Unsubscribe,
+  LockOpen,
+  Lock,
+  Save,
+  Cancel,
+} from "@mui/icons-material";
+import { Button, TextField, Switch } from "@mui/material";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import MainLayout from "../../../layouts/MainLayout";
-import { useParams } from "next/navigation";
 import TrackList from "../../../components/tracks/track-list";
-import { useEffect, useState } from "react";
+import FileUpload from "../../../components/file-upload/file-upload";
+import {
+  useEditPlaylistMutation,
+  useForkPlaylistMutation,
+  useGetUserPlaylistsWithTracksQuery,
+} from "../../../api/playlists";
 import { ITrack } from "../../../types/entries/track";
+import { PlaylistEditForm, playlistEditSchema } from "./playlistEditSchema";
+import { applyApiErrorToForm } from "../../../shared/errors/apply-api-error-to-form";
+import { parseApiError } from "../../../shared/errors/parse-api-error";
+import { useAppSelector } from "../../../hooks/store";
 
 const PlaylistPage = () => {
+  const router = useRouter();
   const params = useParams<{ id: string }>();
 
-  const { data: playlist, isLoading: isLoadingPlaylist } =
-    useGetUserPlaylistsWithTracksQuery(params.id);
+  const [mode, setMode] = useState<"view" | "edit">("view");
+  const { user, initialized } = useAppSelector((state) => state.auth);
+
+  useEffect(() => {
+    if (!initialized) return;
+
+    if (!user) {
+      router.replace("/auth");
+    }
+  }, [initialized, user, router]);
+
+  const { data: playlist, isLoading } = useGetUserPlaylistsWithTracksQuery(
+    params.id,
+  );
+
+  const [
+    editRequest,
+    { isLoading: editRequestIsLoading, error: editRequestError },
+  ] = useEditPlaylistMutation();
+  const [
+    forkRequest,
+    { isLoading: forkRequestIsLoading, error: forkRequestError },
+  ] = useForkPlaylistMutation();
 
   const [tracks, setTracks] = useState<ITrack[]>([]);
 
+  const {
+    register: editForm,
+    handleSubmit: editHandleSubmit,
+    reset,
+    control,
+    watch,
+    setError: setEditPlaylistRequestError,
+    formState: {
+      errors: editPlaylistErrors,
+      isValid: authIsValid,
+      isDirty: editFormIsDirty,
+    },
+  } = useForm<PlaylistEditForm>({
+    resolver: zodResolver(playlistEditSchema),
+    defaultValues: {
+      name: "",
+      isPublic: true,
+      picture: undefined,
+    },
+  });
+
   useEffect(() => {
-    if (!isLoadingPlaylist && playlist) {
+    if (!isLoading && playlist) {
       setTracks(playlist.tracks.map((pt) => pt.track));
+
+      reset({
+        name: playlist.name,
+        isPublic: playlist.isPublic,
+        picture: undefined,
+      });
     }
-  }, [isLoadingPlaylist, playlist]);
+  }, [isLoading, playlist, reset]);
+
+  const picture = watch("picture");
+
+  const coverSrc = useMemo(() => {
+    if (picture instanceof File) {
+      return URL.createObjectURL(picture);
+    }
+
+    if (playlist?.pictureUrl) {
+      return `${process.env.NEXT_PUBLIC_MINIO_URL}/${playlist.pictureUrl}`;
+    }
+
+    return null;
+  }, [picture, playlist?.pictureUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (picture instanceof File) {
+        URL.revokeObjectURL(coverSrc!);
+      }
+    };
+  }, [coverSrc, picture]);
+
+  async function handlerEditPlaylist(data: PlaylistEditForm) {
+    if (editFormIsDirty) {
+      try {
+        const formData = new FormData();
+        formData.append("userId", user!._id);
+        formData.append("playlistId", playlist!._id);
+        formData.append("isPublic", String(data.isPublic));
+        formData.append("name", data.name);
+        if (data.picture) formData.append("picture", data.picture);
+
+        await editRequest(formData).unwrap();
+
+        setMode("view");
+      } catch (error) {
+        const apiError = parseApiError(error);
+
+        if (apiError) {
+          applyApiErrorToForm<PlaylistEditForm>(
+            apiError,
+            setEditPlaylistRequestError,
+          );
+        }
+      }
+    } else {
+      setMode("view");
+    }
+  }
+
+  async function forkHandler() {
+    try {
+      const result = await forkRequest({
+        userId: user!._id,
+        playlistId: playlist!._id,
+      });
+
+      router.push(`/playlists/${result.data?.playlistId}`);
+    } catch (error) {
+      const apiError = parseApiError(error);
+      throw new Error(apiError?.message);
+    }
+  }
 
   return (
     <MainLayout>
-      <div className="flex gap-10">
-        {playlist?.pictureUrl ? (
-          <img
-            src={`${process.env.NEXT_PUBLIC_API_URL}/${playlist.pictureUrl}`}
-            alt="Playlist cover"
-          />
-        ) : (
-          <div className="bg-gray-800 w-40 h-40 rounded-md flex items-center justify-center">
-            <MusicNote color="primary" fontSize="large" />
+      <form
+        onSubmit={editHandleSubmit(handlerEditPlaylist)}
+        className="flex gap-5 items-center justify-between"
+      >
+        <div className="flex gap-10">
+          <div className="relative">
+            {coverSrc ? (
+              <img
+                src={coverSrc}
+                className="w-40 h-40 object-cover rounded-md"
+                alt="Playlist cover"
+              />
+            ) : (
+              <div className="bg-gray-800 w-40 h-40 rounded-md flex items-center justify-center">
+                <MusicNote color="primary" fontSize="large" />
+              </div>
+            )}
+
+            {mode === "edit" && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-md">
+                <Controller
+                  control={control}
+                  name="picture"
+                  render={({ field }) => (
+                    <FileUpload
+                      accept="image/*"
+                      value={field.value}
+                      onChange={field.onChange}
+                    >
+                      <Button size="small" variant="contained">
+                        Загрузить
+                      </Button>
+                    </FileUpload>
+                  )}
+                />
+              </div>
+            )}
           </div>
-        )}
-        <h2 className="font-black text-3xl my-auto">
-          {playlist?.name ?? "Название плейлиста"}
-        </h2>
-      </div>
+
+          <div className="my-auto flex flex-col gap-3">
+            {mode === "edit" ? (
+              <Controller
+                control={control}
+                name="name"
+                render={({ field, fieldState }) => (
+                  <TextField
+                    {...field}
+                    size="small"
+                    error={!!fieldState.error}
+                    helperText={fieldState.error?.message}
+                  />
+                )}
+              />
+            ) : (
+              <h2 className="font-black text-3xl">{playlist?.name}</h2>
+            )}
+
+            <div className="flex items-center gap-2">
+              {mode === "edit" ? (
+                <Controller
+                  control={control}
+                  name="isPublic"
+                  render={({ field }) => (
+                    <>
+                      <Switch
+                        checked={field.value}
+                        onChange={(e) => field.onChange(e.target.checked)}
+                      />
+                      <span className="text-sm">
+                        {field.value ? "Публичный" : "Приватный"}
+                      </span>
+                    </>
+                  )}
+                />
+              ) : (
+                <>
+                  {playlist?.isPublic ? (
+                    <LockOpen fontSize="small" />
+                  ) : (
+                    <Lock fontSize="small" />
+                  )}
+                  <p>{playlist?.isPublic ? "Публичный" : "Приватный"}</p>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-4 items-end">
+          <div className="flex flex-col gap-3">
+            <div className="flex gap-4">
+              {mode === "edit" && (
+                <Button
+                  variant="outlined"
+                  startIcon={<Save />}
+                  type="submit"
+                  disabled={editRequestIsLoading}
+                >
+                  Сохранить
+                </Button>
+              )}
+              <Button
+                variant="outlined"
+                startIcon={mode === "view" ? <Edit /> : <Cancel />}
+                onClick={() => {
+                  reset({
+                    name: playlist?.name,
+                    isPublic: playlist?.isPublic,
+                    picture: undefined,
+                  });
+                  setMode((m) => (m === "view" ? "edit" : "view"));
+                }}
+              >
+                {mode === "view" ? "Редактировать" : "Отменить"}
+              </Button>
+            </div>
+            {editPlaylistErrors.root && (
+              <p className="text-red-500 text-sm text-center">
+                {editPlaylistErrors.root.message ||
+                  "Произошла ошибка на сервере"}
+              </p>
+            )}
+          </div>
+
+          <Button
+            variant="outlined"
+            onClick={() => forkHandler()}
+            startIcon={<ForkLeft />}
+          >
+            Форкнуть
+          </Button>
+
+          <Button variant="outlined" startIcon={<Unsubscribe />}>
+            Отписаться
+          </Button>
+        </div>
+      </form>
 
       <div className="mt-10">
-        {tracks ? (
+        {tracks.length ? (
           <TrackList tracks={tracks} />
         ) : (
-          <p>В этом плейлисте пока нет треков...</p>
+          <p>В этом плейлисте пока нет треков…</p>
         )}
       </div>
     </MainLayout>

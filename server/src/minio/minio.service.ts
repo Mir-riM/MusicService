@@ -2,6 +2,7 @@ import {
   S3Client,
   PutObjectCommand,
   GetObjectCommand,
+  DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { MinioBucket } from './types/minio';
@@ -46,6 +47,19 @@ export class MinioService {
     try {
       await this.s3.send(
         new GetObjectCommand({
+          Bucket: bucket,
+          Key: key,
+        }),
+      );
+    } catch (error) {
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async deleteObject(key: string, bucket: MinioBucket) {
+    try {
+      await this.s3.send(
+        new DeleteObjectCommand({
           Bucket: bucket,
           Key: key,
         }),

@@ -41,20 +41,22 @@ const CollectionPage = () => {
             <p>Вы пока не добавляли треки...</p>
           )}
         </div>
-        <div className="mt-10 flex flex-col gap-5 mb-30">
+        <div className="mt-10 mb-30">
           <h3 className="font-2xl font-bold">Плейлисты</h3>
-          {playlists ? (
-            playlists.map((playlist, index) => (
-              <PlaylistCard
-                key={index}
-                id={playlist._id}
-                pictureUrl={playlist.pictureUrl}
-                name={playlist.name}
-              />
-            ))
-          ) : (
-            <p>Вы пока не добавляли плейлисты...</p>
-          )}
+          <div className="flex gap-5 mt-5">
+            {playlists ? (
+              playlists.map((playlist, index) => (
+                <PlaylistCard
+                  key={index}
+                  id={playlist._id}
+                  pictureUrl={playlist.pictureUrl}
+                  name={playlist.name}
+                />
+              ))
+            ) : (
+              <p>Вы пока не добавляли плейлисты...</p>
+            )}
+          </div>
         </div>
       </MainLayout>
     </AuthGuard>

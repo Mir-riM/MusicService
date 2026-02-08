@@ -3,8 +3,8 @@
 import { useRef, useState } from "react";
 
 type FileUploadProps = {
-  value: File | null;
-  onChange: (file: File | null) => void;
+  value: File | undefined;
+  onChange: (file: File | undefined) => void;
   accept: string;
   children: React.ReactNode;
 };
@@ -19,7 +19,7 @@ const FileUpload = ({ value, onChange, accept, children }: FileUploadProps) => {
         type="file"
         hidden
         accept={accept}
-        onChange={(e) => onChange(e.target.files?.[0] ?? null)}
+        onChange={(e) => onChange(e.target.files?.[0] ?? undefined)}
       />
       <div onClick={() => ref.current?.click()}>{children}</div>
     </>

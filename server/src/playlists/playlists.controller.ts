@@ -4,9 +4,14 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
+  Put,
   Req,
+  UploadedFile,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { PlaylistsService } from './playlists.service';
 import { JwtAuthGuard } from '../common/guards/auth.guard';
@@ -15,6 +20,10 @@ import { AddTrackToPlaylistDto } from './dto/addTrackToPlaylist.dto';
 import { SubscribeOnPlaylistDto } from './dto/subscribeOnPlaylist.dto';
 import { UnsubscribeOnPlaylistDto } from './dto/unsubscribe.dto';
 import { forkDto } from './dto/fork.dto';
+import { EditPlaylistDto } from './dto/editPlaylist.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { MulterFile } from '../track/dto/createTrack.dto';
+import { DeleteTrackFromPlaylist } from './dto/removeTrackFromPlaylist';
 
 @Controller('playlists')
 export class PlaylistsController {
@@ -30,6 +39,12 @@ export class PlaylistsController {
   @Post('/add/track')
   async addTrackToPlaylist(@Body() dto: AddTrackToPlaylistDto) {
     return this.playlistsService.addTrackToPlaylist(dto);
+  }
+  s;
+  @UseGuards(JwtAuthGuard)
+  @Delete('/delete/track')
+  async removeTrackFromPlaylist(@Body() dto: DeleteTrackFromPlaylist) {
+    return this.playlistsService.deleteTrackFromPlaylist(dto);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -59,5 +74,20 @@ export class PlaylistsController {
   @Get('/user/:id')
   async getPlaylistsBySubscriber(@Param('id') userId: string) {
     return this.playlistsService.getPlaylistsBySubscriber(userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('picture'))
+  @Patch('/edit')
+  async editPlaylist(
+    @UploadedFile() picture: MulterFile | undefined,
+    @Body() dto: EditPlaylistDto,
+  ) {
+    const data = {
+      ...dto,
+      isPublic: String(dto?.isPublic) === 'true',
+    };
+
+    return this.playlistsService.edit(data, picture);
   }
 }
