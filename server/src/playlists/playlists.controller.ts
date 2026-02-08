@@ -40,7 +40,7 @@ export class PlaylistsController {
   async addTrackToPlaylist(@Body() dto: AddTrackToPlaylistDto) {
     return this.playlistsService.addTrackToPlaylist(dto);
   }
-  s;
+  
   @UseGuards(JwtAuthGuard)
   @Delete('/delete/track')
   async removeTrackFromPlaylist(@Body() dto: DeleteTrackFromPlaylist) {
