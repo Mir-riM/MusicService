@@ -11,7 +11,6 @@ import { PlaylistTracks } from './schemas/playlistTracks.schema';
 import { PlaylistSubscription } from './schemas/playlistSubscription.schema';
 import { AddTrackToPlaylistDto } from './dto/addTrackToPlaylist.dto';
 import { SubscribeOnPlaylistDto } from './dto/subscribeOnPlaylist.dto';
-import { UnsubscribeOnPlaylistDto } from './dto/unsubscribe.dto';
 import { forkDto } from './dto/fork.dto';
 import { EditPlaylistDto } from './dto/editPlaylist.dto';
 import { MinioService } from '../minio/minio.service';
@@ -34,8 +33,20 @@ export class PlaylistsService {
     private minioService: MinioService,
   ) {}
 
-  async create(dto: CreatePlaylistDto): Promise<Playlist> {
-    const playlist = await this.playlistModel.create(dto);
+  async create(
+    dto: CreatePlaylistDto,
+    picture: MulterFile | undefined,
+  ): Promise<Playlist> {
+    let pictureUrl: string | undefined;
+
+    if (picture) {
+      pictureUrl = await this.minioService.putObject(
+        picture,
+        MinioBucket.PLAYLISTS,
+      );
+    }
+
+    const playlist = await this.playlistModel.create({ ...dto, pictureUrl });
 
     await this.playlistSubscriberModel.create({
       userId: dto.ownerId,
@@ -118,44 +129,45 @@ export class PlaylistsService {
   }
 
   async subscribe(dto: SubscribeOnPlaylistDto): Promise<void> {
+    const playlist = await this.playlistModel.findById(dto.playlistId);
+
+    if (!playlist) {
+      throw new NotFoundException('Playlist not found');
+    }
+
     const existingSubscription = await this.playlistSubscriberModel.findOne({
       userId: dto.userId,
       playlistId: dto.playlistId,
     });
 
     if (existingSubscription) {
-      throw new Error('Already subscribed');
-    }
-
-    await this.playlistSubscriberModel.create(dto);
-  }
-
-  async unsubscribe(dto: UnsubscribeOnPlaylistDto) {
-    const playlist = await this.playlistModel.findById(dto.userId);
-
-    if (!playlist) {
-      throw new NotFoundException('Playlist not found');
-    }
-
-    const playlistSubscribers = await this.playlistSubscriberModel.find({
-      playlistId: dto.playlistId,
-    });
-
-    if (playlistSubscribers.length === 1) {
-      await this.playlistSubscriberModel.deleteMany({
+      const playlistSubscribers = await this.playlistSubscriberModel.find({
         playlistId: dto.playlistId,
       });
-      await this.playlistTrackModel.deleteMany({ playlistId: dto.playlistId });
-      await this.playlistModel.findByIdAndDelete(dto.playlistId);
+
+      if (playlistSubscribers.length === 1) {
+        await this.playlistSubscriberModel.deleteMany({
+          playlistId: dto.playlistId,
+        });
+        await this.playlistTrackModel.deleteMany({
+          playlistId: dto.playlistId,
+        });
+        await this.playlistModel.findByIdAndDelete(dto.playlistId);
+      }
+
+      if (playlistSubscribers.length > 1) {
+        await this.playlistSubscriberModel.deleteOne({
+          playlistId: dto.playlistId,
+          userId: dto.userId,
+        });
+      }
     }
 
-    if (playlistSubscribers.length > 1) {
-      await this.playlistSubscriberModel.deleteOne({
-        playlistId: dto.playlistId,
-        userId: dto.userId,
-      });
+    if (!existingSubscription) {
+      await this.playlistSubscriberModel.create(dto);
     }
   }
+
   async fork(dto: forkDto): Promise<{ playlistId: string }> {
     const originPlaylist = await this.playlistModel.findById(dto.playlistId);
 

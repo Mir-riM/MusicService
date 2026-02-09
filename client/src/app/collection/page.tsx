@@ -43,7 +43,7 @@ const CollectionPage = () => {
         </div>
         <div className="mt-10 mb-30">
           <h3 className="font-2xl font-bold">Плейлисты</h3>
-          <div className="flex gap-5 mt-5">
+          <div className="flex flex-wrap gap-5 mt-5 justify-center">
             {playlists ? (
               playlists.map((playlist, index) => (
                 <PlaylistCard

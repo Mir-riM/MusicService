@@ -6,10 +6,7 @@ import {
   Param,
   Patch,
   Post,
-  Put,
-  Req,
   UploadedFile,
-  UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -18,7 +15,6 @@ import { JwtAuthGuard } from '../common/guards/auth.guard';
 import { CreatePlaylistDto } from './dto/createPlaylist.dto';
 import { AddTrackToPlaylistDto } from './dto/addTrackToPlaylist.dto';
 import { SubscribeOnPlaylistDto } from './dto/subscribeOnPlaylist.dto';
-import { UnsubscribeOnPlaylistDto } from './dto/unsubscribe.dto';
 import { forkDto } from './dto/fork.dto';
 import { EditPlaylistDto } from './dto/editPlaylist.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -31,8 +27,12 @@ export class PlaylistsController {
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  async create(@Body() dto: CreatePlaylistDto) {
-    return this.playlistsService.create(dto);
+  @UseInterceptors(FileInterceptor('picture'))
+  async create(
+    @UploadedFile() picture: MulterFile | undefined,
+    @Body() dto: CreatePlaylistDto,
+  ) {
+    return this.playlistsService.create(dto, picture);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -40,7 +40,7 @@ export class PlaylistsController {
   async addTrackToPlaylist(@Body() dto: AddTrackToPlaylistDto) {
     return this.playlistsService.addTrackToPlaylist(dto);
   }
-  
+
   @UseGuards(JwtAuthGuard)
   @Delete('/delete/track')
   async removeTrackFromPlaylist(@Body() dto: DeleteTrackFromPlaylist) {
@@ -49,14 +49,8 @@ export class PlaylistsController {
 
   @UseGuards(JwtAuthGuard)
   @Post('/subscribe')
-  async subscripeOnPlaylist(@Body() dto: SubscribeOnPlaylistDto) {
+  async subscribe(@Body() dto: SubscribeOnPlaylistDto) {
     return this.playlistsService.subscribe(dto);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Post()
-  async unsubscribe(@Body() dto: UnsubscribeOnPlaylistDto) {
-    return this.playlistsService.unsubscribe(dto);
   }
 
   @UseGuards(JwtAuthGuard)

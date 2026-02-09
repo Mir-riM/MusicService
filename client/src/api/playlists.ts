@@ -1,6 +1,7 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { baseQueryWithReauth } from "./baseQueryReauth";
 import { IPlaylist, IPlaylistWithTracks } from "../types/entries/playlist";
+import { dot } from "node:test/reporters";
 
 export type UserAndPlaylistDto = {
   userId: string;
@@ -10,13 +11,14 @@ export type UserAndPlaylistDto = {
 export const playlistsApi = createApi({
   baseQuery: baseQueryWithReauth,
   reducerPath: "/playlistsApi",
-  tagTypes: ["playlist"],
+  tagTypes: ["playlist", "userPlaylists"],
 
   endpoints: (builder) => ({
     getUserPlaylists: builder.query<IPlaylist[], string>({
       query: (id) => `playlists/user/${id}`,
+      providesTags: (result, error, id) => [{ type: "userPlaylists", id }],
     }),
-    getUserPlaylistsWithTracks: builder.query<IPlaylistWithTracks, string>({
+    getUserPlaylistWithTracks: builder.query<IPlaylistWithTracks, string>({
       query: (id) => `playlists/${id}`,
       providesTags: (result, error, id) => [{ type: "playlist", id }],
     }),
@@ -58,6 +60,15 @@ export const playlistsApi = createApi({
         { type: "playlist", id: formData.get("playlistId") as string },
       ],
     }),
+    createPlaylist: builder.mutation<IPlaylist, FormData>({
+      query: (dto) => {
+        return {
+          url: "/playlists",
+          method: "POST",
+          body: dto,
+        };
+      },
+    }),
 
     forkPlaylist: builder.mutation<{ playlistId: string }, UserAndPlaylistDto>({
       query: (dto) => {
@@ -76,15 +87,19 @@ export const playlistsApi = createApi({
           body: dto,
         };
       },
+      invalidatesTags: (resut, error, dto) => [ 
+        { type: "userPlaylists", id: dto.userId },
+      ],
     }),
   }),
 });
 
 export const {
   useGetUserPlaylistsQuery,
-  useGetUserPlaylistsWithTracksQuery,
+  useGetUserPlaylistWithTracksQuery,
   useDeleteTrackFromPlaylistMutation,
   useEditPlaylistMutation,
+  useCreatePlaylistMutation,
   useForkPlaylistMutation,
   useSubscribePlaylistMutation,
 } = playlistsApi;

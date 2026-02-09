@@ -4,11 +4,12 @@ import {
   Edit,
   ForkLeft,
   MusicNote,
-  Unsubscribe,
   LockOpen,
+  Unsubscribe,
   Lock,
   Save,
   Cancel,
+  Subscriptions,
 } from "@mui/icons-material";
 import { Button, TextField, Switch } from "@mui/material";
 import { useParams, useRouter } from "next/navigation";
@@ -21,7 +22,9 @@ import FileUpload from "../../../components/file-upload/file-upload";
 import {
   useEditPlaylistMutation,
   useForkPlaylistMutation,
-  useGetUserPlaylistsWithTracksQuery,
+  useGetUserPlaylistsQuery,
+  useGetUserPlaylistWithTracksQuery,
+  useSubscribePlaylistMutation,
 } from "../../../api/playlists";
 import { ITrack } from "../../../types/entries/track";
 import { PlaylistEditForm, playlistEditSchema } from "./playlistEditSchema";
@@ -44,18 +47,24 @@ const PlaylistPage = () => {
     }
   }, [initialized, user, router]);
 
-  const { data: playlist, isLoading } = useGetUserPlaylistsWithTracksQuery(
-    params.id,
+  const { data: playlist, isLoading: playlistIsLoading } =
+    useGetUserPlaylistWithTracksQuery(params.id);
+
+  const { data: allUserPlaylists } = useGetUserPlaylistsQuery(user?._id!, {
+    skip: !user?._id,
+  });
+
+  const isSubscribed = useMemo(
+    () => allUserPlaylists?.some((item) => item._id === playlist?._id),
+    [allUserPlaylists, playlist?._id],
   );
 
-  const [
-    editRequest,
-    { isLoading: editRequestIsLoading, error: editRequestError },
-  ] = useEditPlaylistMutation();
-  const [
-    forkRequest,
-    { isLoading: forkRequestIsLoading, error: forkRequestError },
-  ] = useForkPlaylistMutation();
+  const [editRequest, { isLoading: editRequestIsLoading }] =
+    useEditPlaylistMutation();
+  const [forkRequest, { isLoading: forkRequestIsLoading }] =
+    useForkPlaylistMutation();
+  const [subscribeRequest, { isLoading: subscribeRequestIsLoading }] =
+    useSubscribePlaylistMutation();
 
   const [tracks, setTracks] = useState<ITrack[]>([]);
 
@@ -81,7 +90,7 @@ const PlaylistPage = () => {
   });
 
   useEffect(() => {
-    if (!isLoading && playlist) {
+    if (!playlistIsLoading && playlist) {
       setTracks(playlist.tracks.map((pt) => pt.track));
 
       reset({
@@ -90,7 +99,7 @@ const PlaylistPage = () => {
         picture: undefined,
       });
     }
-  }, [isLoading, playlist, reset]);
+  }, [playlistIsLoading, playlist, reset]);
 
   const picture = watch("picture");
 
@@ -150,6 +159,18 @@ const PlaylistPage = () => {
       });
 
       router.push(`/playlists/${result.data?.playlistId}`);
+    } catch (error) {
+      const apiError = parseApiError(error);
+      throw new Error(apiError?.message);
+    }
+  }
+
+  async function subscribeHandler() {
+    try {
+      const result = await subscribeRequest({
+        userId: user!._id,
+        playlistId: playlist!._id,
+      });
     } catch (error) {
       const apiError = parseApiError(error);
       throw new Error(apiError?.message);
@@ -286,12 +307,18 @@ const PlaylistPage = () => {
             variant="outlined"
             onClick={() => forkHandler()}
             startIcon={<ForkLeft />}
+            disabled={forkRequestIsLoading}
           >
             Форкнуть
           </Button>
 
-          <Button variant="outlined" startIcon={<Unsubscribe />}>
-            Отписаться
+          <Button
+            onClick={() => subscribeHandler()}
+            variant="outlined"
+            startIcon={isSubscribed ? <Unsubscribe /> : <Subscriptions />}
+            disabled={subscribeRequestIsLoading}
+          >
+            {isSubscribed ? "Отписаться" : "Подписаться"}
           </Button>
         </div>
       </form>
