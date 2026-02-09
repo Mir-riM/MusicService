@@ -25,3 +25,17 @@ export interface IPlaylistWithTracks extends IPlaylist {
     track: ITrack;
   }[];
 }
+
+export interface IPlaylistTrackLink {
+  _id: string;
+  playlistId: string;
+  trackId: string;
+  position: number;
+  addedAt: string;
+}
+
+export interface IPlaylistWithTrackLinks {
+  _id: string;
+  name: string;
+  tracks: IPlaylistTrackLink[];
+}

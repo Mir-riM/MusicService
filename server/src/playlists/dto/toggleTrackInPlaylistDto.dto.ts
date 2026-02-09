@@ -1,4 +1,4 @@
-export class AddTrackToPlaylistDto {
+export class ToggleTrackInPlaylistDto {
   playlistId: string;
   trackId: string;
 }

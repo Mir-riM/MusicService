@@ -2,7 +2,7 @@
 import { useRouter } from "next/navigation";
 import { useGetUserPlaylistsQuery } from "../../api/playlists";
 import { useGetAllTracksQuery } from "../../api/tracks";
-import TrackList from "../../components/tracks/track-list";
+import TrackList from "../../components/tracks/trackList";
 import { AuthGuard } from "../../guards/authGuard";
 import MainLayout from "../../layouts/MainLayout";
 import { useAppSelector } from "../../hooks/store";

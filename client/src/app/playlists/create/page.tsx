@@ -94,6 +94,9 @@ const PlaylistPage = () => {
 
   return (
     <MainLayout>
+      <h2 className="text-center font-black text-3xl py-10">
+        Создание плейлиста
+      </h2>
       <form
         onSubmit={createHandleSubmit(handlerEditPlaylist)}
         className="flex gap-5 items-center justify-between"
@@ -137,6 +140,7 @@ const PlaylistPage = () => {
               name="name"
               render={({ field, fieldState }) => (
                 <TextField
+                  placeholder="Введите название"
                   {...field}
                   size="small"
                   error={!!fieldState.error}

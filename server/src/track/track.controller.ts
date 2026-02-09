@@ -17,6 +17,7 @@ import { CreateCommentDto } from './dto/createComment.dto';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../common/guards/auth.guard';
 import type { TrackLikeDto } from './dto/trackLike.dto';
+import { TrackLikeDocument } from './schemas/trackLike.schema';
 
 @Controller('/tracks')
 export class TrackController {

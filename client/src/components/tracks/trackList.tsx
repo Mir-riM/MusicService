@@ -1,5 +1,5 @@
 import { ITrack } from "../../types/entries/track";
-import TrackItem from "./track-item";
+import TrackItem from "./trackItem/trackItem";
 
 interface ListTracksProps {
   tracks: ITrack[];

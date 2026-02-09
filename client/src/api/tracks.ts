@@ -1,5 +1,5 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
-import { IComment, ITrack } from "../types/entries/track";
+import { IComment, ITrack, ITrackLike } from "../types/entries/track";
 import { baseQueryWithReauth } from "./baseQueryReauth";
 
 export const tracksApi = createApi({
@@ -17,6 +17,9 @@ export const tracksApi = createApi({
     }),
     getTracksBySearch: builder.query<ITrack[], string>({
       query: (query) => `/tracks/search?query=${query}`,
+    }),
+    getTracksLikedUser: builder.query<ITrackLike[], string>({
+      query: (id) => `/tracks/likes/${id}`,
     }),
     createTrack: builder.mutation<ITrack, FormData>({
       query: (formData) => {
@@ -41,7 +44,6 @@ export const tracksApi = createApi({
       },
       invalidatesTags: ["Track"],
     }),
-    // todo: сделать лайки\дизлайки треков и вывод лайкнутых треков с кешированием в store без постоянных запросов к серверу
   }),
 });
 

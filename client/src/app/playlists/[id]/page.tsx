@@ -17,7 +17,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import MainLayout from "../../../layouts/MainLayout";
-import TrackList from "../../../components/tracks/track-list";
+import TrackList from "../../../components/tracks/trackList";
 import FileUpload from "../../../components/file-upload/file-upload";
 import {
   useEditPlaylistMutation,

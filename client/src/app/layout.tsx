@@ -12,7 +12,7 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "TatarMusic",
+  title: "MusicService",
   description: "Сервис для прослушивания музыки",
 };
 
@@ -23,7 +23,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru" className={manrope.variable}>
-      <body className={`${manrope.className} bg-zinc-900 text-zinc-100 antialiased`}>
+      <body
+        className={`${manrope.className} bg-zinc-900 text-zinc-100 antialiased`}
+      >
         <AppRouterCacheProvider>
           <Providers>
             {children}

@@ -1,17 +1,29 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { baseQueryWithReauth } from "./baseQueryReauth";
-import { IPlaylist, IPlaylistWithTracks } from "../types/entries/playlist";
-import { dot } from "node:test/reporters";
+import {
+  IPlaylist,
+  IPlaylistWithTrackLinks,
+  IPlaylistWithTracks,
+} from "../types/entries/playlist";
 
 export type UserAndPlaylistDto = {
   userId: string;
   playlistId: string;
 };
+export type TrackAndPlaylistDto = {
+  trackId: string;
+  playlistId: string;
+};
+export type PlaylistTrackUserDto = {
+  trackId: string;
+  playlistId: string;
+  userId: string;
+};
 
 export const playlistsApi = createApi({
   baseQuery: baseQueryWithReauth,
   reducerPath: "/playlistsApi",
-  tagTypes: ["playlist", "userPlaylists"],
+  tagTypes: ["playlist", "userPlaylists", "playlistTrackLink"],
 
   endpoints: (builder) => ({
     getUserPlaylists: builder.query<IPlaylist[], string>({
@@ -22,30 +34,27 @@ export const playlistsApi = createApi({
       query: (id) => `playlists/${id}`,
       providesTags: (result, error, id) => [{ type: "playlist", id }],
     }),
-    deleteTrackFromPlaylist: builder.mutation<
-      IPlaylistWithTracks,
-      UserAndPlaylistDto
-    >({
-      query: (dto) => {
-        return {
-          url: "playlists/delete/track",
-          method: "DELETE",
-          body: dto,
-        };
-      },
+
+    getPlaylistTrackLink: builder.query<IPlaylistWithTrackLinks[], string>({
+      query: (id) => `playlists/${id}/track/link`,
+      providesTags: (result, error, id) => [{ type: "playlistTrackLink", id }],
     }),
 
-    addTrackToPlaylist: builder.mutation<
-      IPlaylistWithTracks,
-      UserAndPlaylistDto
+    toggleTrackInPlaylist: builder.mutation<
+      { included: boolean },
+      PlaylistTrackUserDto
     >({
       query: (dto) => {
         return {
-          url: "playlists/add/track",
+          url: "playlists/toggle/track",
           method: "POST",
           body: dto,
         };
       },
+      invalidatesTags: (result, error, dto) => [
+        { type: "playlistTrackLink", id: dto.userId },
+        { type: "playlist", id: dto.playlistId },
+      ],
     }),
 
     editPlaylist: builder.mutation<void, FormData>({
@@ -87,7 +96,7 @@ export const playlistsApi = createApi({
           body: dto,
         };
       },
-      invalidatesTags: (resut, error, dto) => [ 
+      invalidatesTags: (resut, error, dto) => [
         { type: "userPlaylists", id: dto.userId },
       ],
     }),
@@ -97,7 +106,8 @@ export const playlistsApi = createApi({
 export const {
   useGetUserPlaylistsQuery,
   useGetUserPlaylistWithTracksQuery,
-  useDeleteTrackFromPlaylistMutation,
+  useGetPlaylistTrackLinkQuery,
+  useToggleTrackInPlaylistMutation,
   useEditPlaylistMutation,
   useCreatePlaylistMutation,
   useForkPlaylistMutation,

@@ -5,18 +5,17 @@ import {
   PlaylistDocument,
   PlaylistType,
 } from './schemas/playlist.schema';
-import { Model } from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 import { CreatePlaylistDto } from './dto/createPlaylist.dto';
 import { PlaylistTracks } from './schemas/playlistTracks.schema';
 import { PlaylistSubscription } from './schemas/playlistSubscription.schema';
-import { AddTrackToPlaylistDto } from './dto/addTrackToPlaylist.dto';
+import { ToggleTrackInPlaylistDto } from './dto/toggleTrackInPlaylistDto.dto';
 import { SubscribeOnPlaylistDto } from './dto/subscribeOnPlaylist.dto';
 import { forkDto } from './dto/fork.dto';
 import { EditPlaylistDto } from './dto/editPlaylist.dto';
 import { MinioService } from '../minio/minio.service';
 import { MinioBucket } from '../minio/types/minio';
 import { MulterFile } from '../track/dto/createTrack.dto';
-import { DeleteTrackFromPlaylist } from './dto/removeTrackFromPlaylist';
 
 export interface PlaylistWithTracks extends Playlist {
   tracks: PlaylistTracks[];
@@ -85,47 +84,73 @@ export class PlaylistsService {
     return playlists;
   }
 
-  async addTrackToPlaylist(
-    dto: AddTrackToPlaylistDto,
-  ): Promise<PlaylistWithTracks> {
-    const playlist = await this.playlistModel.findById(dto.playlistId);
-
-    const playlistTracks = await this.playlistTrackModel
-      .find({ playlistId: dto.playlistId })
-      .sort({ position: 1 })
-      .populate('track');
-
-    if (!playlist) {
-      throw new NotFoundException('Playlist not found');
-    }
-
-    await this.playlistTrackModel.create(dto, {
-      position: playlistTracks.length + 1,
-    });
-
-    return { ...playlist.toObject(), tracks: playlistTracks };
+  async getPlaylistTrackLink(userId: string) {
+    return this.playlistModel.aggregate([
+      {
+        $lookup: {
+          from: 'playlistsubscriptions',
+          localField: '_id',
+          foreignField: 'playlistId',
+          as: 'subs',
+        },
+      },
+      {
+        $match: {
+          'subs.userId': new mongoose.Types.ObjectId(userId),
+        },
+      },
+      {
+        $lookup: {
+          from: 'playlisttracks',
+          localField: '_id',
+          foreignField: 'playlistId',
+          as: 'tracks',
+        },
+      },
+      {
+        $project: {
+          subs: 0,
+        },
+      },
+    ]);
   }
 
-  async deleteTrackFromPlaylist(
-    dto: DeleteTrackFromPlaylist,
-  ): Promise<PlaylistWithTracks> {
-    const deleteTrack = await this.playlistTrackModel.deleteOne({
-      trackId: dto.trackId,
-      playlistId: dto.playlistId,
-    });
-
+  async toggleTrackInPlaylist(
+    dto: ToggleTrackInPlaylistDto,
+  ): Promise<{ included: boolean }> {
     const playlist = await this.playlistModel.findById(dto.playlistId);
-
-    const playlistTracks = await this.playlistTrackModel
-      .find({ playlistId: dto.playlistId })
-      .sort({ position: 1 })
-      .populate('track');
 
     if (!playlist) {
       throw new NotFoundException('Playlist not found');
     }
 
-    return { ...playlist.toObject(), tracks: playlistTracks };
+    const existingTrack = await this.playlistTrackModel.findOne({
+      playlistId: dto.playlistId,
+      trackId: dto.trackId,
+    });
+
+    if (!existingTrack) {
+      const last = await this.playlistTrackModel
+        .findOne({ playlistId: dto.playlistId })
+        .sort({ position: -1 });
+
+      const position = last ? last.position + 1 : 1;
+
+      await this.playlistTrackModel.create({
+        playlistId: dto.playlistId,
+        trackId: dto.trackId,
+        position,
+      });
+    }
+
+    if (existingTrack) {
+      await this.playlistTrackModel.deleteOne({
+        playlistId: dto.playlistId,
+        trackId: dto.trackId,
+      });
+    }
+
+    return { included: !existingTrack };
   }
 
   async subscribe(dto: SubscribeOnPlaylistDto): Promise<void> {

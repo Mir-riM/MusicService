@@ -2,7 +2,7 @@
 import { Button, Card, Grid } from "@mui/material";
 import MainLayout from "../../layouts/MainLayout";
 import React from "react";
-import TrackList from "../../components/tracks/track-list";
+import TrackList from "../../components/tracks/trackList";
 import {
   useGetAllTracksQuery,
   useGetTracksBySearchQuery,
