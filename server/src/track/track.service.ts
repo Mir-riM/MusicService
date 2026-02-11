@@ -90,7 +90,7 @@ export class TrackService {
     return tracks;
   }
 
-  async toggleLike(dto: TrackLikeDto): Promise<TrackLike[]> {
+  async toggleLike(dto: TrackLikeDto): Promise<void> {
     const existingLike = await this.trackLikeModel.findOne({
       userId: dto.userId,
       trackId: dto.trackId,
@@ -103,9 +103,20 @@ export class TrackService {
     } else {
       await this.trackLikeModel.create(dto);
     }
-    return await this.trackLikeModel.find({ trackId: dto.trackId });
   }
-  async getLikes(userId: string): Promise<TrackLike[]> {
+
+  async getLikeLinks(userId: string): Promise<TrackLike[]> {
     return await this.trackLikeModel.find({ userId });
+  }
+
+  async getLikeTracks(userId: string): Promise<TrackDocument[]> {
+    const likes = await this.trackLikeModel
+      .find({ userId })
+      .select('trackId')
+      .lean();
+
+    const trackIds = likes.map((l) => l.trackId);
+
+    return this.trackModel.find({ _id: { $in: trackIds } });
   }
 }

@@ -1,7 +1,10 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useGetUserPlaylistsQuery } from "../../api/playlists";
-import { useGetAllTracksQuery } from "../../api/tracks";
+import {
+  useGetAllTracksQuery,
+  useGetTracksLikedUserQuery,
+} from "../../api/tracks";
 import TrackList from "../../components/tracks/trackList";
 import { AuthGuard } from "../../guards/authGuard";
 import MainLayout from "../../layouts/MainLayout";
@@ -22,8 +25,10 @@ const CollectionPage = () => {
     }
   }, [initialized, user, router]);
 
-  const { data: tracks } = useGetAllTracksQuery();
   const { data: playlists } = useGetUserPlaylistsQuery(user?._id ?? "", {
+    skip: !user,
+  });
+  const { data: likedTracks } = useGetTracksLikedUserQuery(user?._id ?? "", {
     skip: !user,
   });
 
@@ -35,8 +40,8 @@ const CollectionPage = () => {
         </div>
         <div className="mt-10 flex flex-col gap-5">
           <h3 className="font-2xl font-bold">Понравившиеся</h3>
-          {tracks ? (
-            <TrackList tracks={tracks} />
+          {likedTracks && likedTracks?.length > 0 ? (
+            <TrackList tracks={likedTracks} />
           ) : (
             <p>Вы пока не добавляли треки...</p>
           )}

@@ -5,22 +5,44 @@ import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { store } from "../store";
 import { useEffect } from "react";
-import { setUserState, logout } from "../store/slices/auth";
+import {
+  setUserState,
+  logout,
+  selectUserLikedTracks,
+  setUserLikedTracks,
+} from "../store/slices/auth";
 import { useMeQuery } from "../api/auth";
 import { darkTheme } from "./theme";
 import { SnackbarProvider } from "notistack";
+import { useGetTracksLikedListUserQuery } from "../api/tracks";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   function AuthInit() {
     const dispatch = useDispatch();
-    const { data, isLoading, isUninitialized } = useMeQuery();
+    const {
+      data: user,
+      isLoading: userIsLoading,
+      isUninitialized,
+    } = useMeQuery();
+    const { data: userLikedTracks, isLoading: userLikedTracksIsLoading } =
+      useGetTracksLikedListUserQuery(user?._id ?? "", {
+        skip: !user?._id,
+      });
 
     useEffect(() => {
-      if (isLoading || isUninitialized) return;
+      if (userIsLoading || isUninitialized) return;
 
-      if (data) dispatch(setUserState(data));
+      if (user) dispatch(setUserState(user));
       else dispatch(logout());
-    }, [data, isLoading, isUninitialized, dispatch]);
+    }, [user, userIsLoading, isUninitialized, dispatch]);
+
+    useEffect(() => {
+      if (!userLikedTracks) {
+        return;
+      }
+
+      dispatch(setUserLikedTracks(userLikedTracks));
+    }, [user, userIsLoading, userLikedTracks, userLikedTracksIsLoading]);
 
     return null;
   }

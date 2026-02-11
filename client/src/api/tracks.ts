@@ -1,11 +1,12 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { IComment, ITrack, ITrackLike } from "../types/entries/track";
 import { baseQueryWithReauth } from "./baseQueryReauth";
+import { UserAndTrackDto } from "./playlists";
 
 export const tracksApi = createApi({
   reducerPath: "tracksApi",
   baseQuery: baseQueryWithReauth,
-  tagTypes: ["allTracks", "Track"],
+  tagTypes: ["allTracks", "Track", "LikeTrack"],
   endpoints: (builder) => ({
     getAllTracks: builder.query<ITrack[], void>({
       query: () => "/tracks/all",
@@ -18,8 +19,13 @@ export const tracksApi = createApi({
     getTracksBySearch: builder.query<ITrack[], string>({
       query: (query) => `/tracks/search?query=${query}`,
     }),
-    getTracksLikedUser: builder.query<ITrackLike[], string>({
-      query: (id) => `/tracks/likes/${id}`,
+    getTracksLikedListUser: builder.query<ITrackLike[], string>({
+      query: (id) => `/tracks/like/links/${id}`,
+      providesTags: ["LikeTrack"],
+    }),
+    getTracksLikedUser: builder.query<ITrack[], string>({
+      query: (id) => `/tracks/like/${id}`,
+      providesTags: ["LikeTrack"],
     }),
     createTrack: builder.mutation<ITrack, FormData>({
       query: (formData) => {
@@ -44,6 +50,16 @@ export const tracksApi = createApi({
       },
       invalidatesTags: ["Track"],
     }),
+    likeTrack: builder.mutation<void, UserAndTrackDto>({
+      query: (dto) => {
+        return {
+          url: "/tracks/like",
+          method: "POST",
+          body: dto,
+        };
+      },
+      invalidatesTags: ["LikeTrack"],
+    }),
   }),
 });
 
@@ -51,6 +67,9 @@ export const {
   useGetAllTracksQuery,
   useGetTrackByIdQuery,
   useGetTracksBySearchQuery,
+  useGetTracksLikedUserQuery,
+  useGetTracksLikedListUserQuery,
   useCreateTrackMutation,
   useCreateCommentMutation,
+  useLikeTrackMutation,
 } = tracksApi;

@@ -10,6 +10,10 @@ export type UserAndPlaylistDto = {
   userId: string;
   playlistId: string;
 };
+export type UserAndTrackDto = {
+  userId: string;
+  trackId: string;
+};
 export type TrackAndPlaylistDto = {
   trackId: string;
   playlistId: string;

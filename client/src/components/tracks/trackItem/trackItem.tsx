@@ -9,6 +9,7 @@ import {
 } from "../../../store/slices/player";
 import { useAppDispatch, useAppSelector } from "../../../hooks/store";
 import TrackMenu from "./trackMenu";
+import LikeButtonTrack from "./like";
 
 interface TrackItemProps {
   track: ITrack;
@@ -58,7 +59,8 @@ const TrackItem = ({ track }: TrackItemProps) => {
       >
         {active?._id === track._id && !isPaused ? <Pause /> : <PlayArrow />}
       </div>
-      <div className="ml-auto">
+      <div className="ml-auto flex gap-5">
+        <LikeButtonTrack track={track} />
         <TrackMenu track={track} />
       </div>
     </Card>

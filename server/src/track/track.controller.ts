@@ -86,20 +86,25 @@ export class TrackController {
 
   // по идее можно сделать api запрос который срабатывает после завершения прослушивания
   // добавляя песню в историю, увеличивая ей прослушивание и так далее
-  @Post(':id')
+  @Post(':id/listen')
   listen(@Param('id') trackId: string) {
     return this.trackService.listen(trackId);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Get('/likes/:userId')
-  async getLikes(@Param('userId') userId: string) {
-    return await this.trackService.getLikes(userId);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('/like')
   async like(@Body() dto: TrackLikeDto) {
     return await this.trackService.toggleLike(dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('/like/links/:userId')
+  async getLikeLinks(@Param('userId') userId: string) {
+    return await this.trackService.getLikeLinks(userId);
+  }
+  @UseGuards(JwtAuthGuard)
+  @Get('/like/:userId')
+  async getLikeTracks(@Param('userId') userId: string) {
+    return await this.trackService.getLikeTracks(userId);
   }
 }
