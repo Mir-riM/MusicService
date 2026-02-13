@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -47,8 +48,8 @@ export class TrackController {
   create(
     @UploadedFiles()
     files: {
-      track: MulterFile;
-      picture: MulterFile;
+      track: MulterFile[];
+      picture: MulterFile[];
     },
     @Body() dto: createTrackDto,
   ) {

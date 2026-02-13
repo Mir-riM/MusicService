@@ -1,23 +1,33 @@
 "use client";
 
 import { Pause, PlayArrow, VolumeMute, VolumeUp } from "@mui/icons-material";
-import { Card } from "@mui/material";
-import { useEffect, useState } from "react";
+import { Card, IconButton } from "@mui/material";
+import { useEffect, useRef } from "react";
 import TrackProgress from "./track-progress";
 import {
+  nextTrack,
   pauseTrack,
   playTrack,
+  previousTrack,
+  setActiveTrack,
   setCurrentTimeTrack,
   setDurationTrack,
   setVolumeTrack,
+  toggleRepeatMode,
 } from "../../store/slices/player";
 import { useAppDispatch, useAppSelector } from "../../hooks/store";
-
-let track: HTMLAudioElement | null = null;
+import SkipPreviousIcon from "@mui/icons-material/SkipPrevious";
+import SkipNextIcon from "@mui/icons-material/SkipNext";
+import RepeatIcon from "@mui/icons-material/Repeat";
+import RepeatOnIcon from "@mui/icons-material/RepeatOn";
+import RepeatOneOnIcon from "@mui/icons-material/RepeatOneOn";
 
 const Player: React.FC = () => {
   const dispatch = useAppDispatch();
   const {
+    queue,
+    shuffle,
+    repeatMode,
     active,
     pause: isPaused,
     volume,
@@ -25,78 +35,125 @@ const Player: React.FC = () => {
     currentTime,
   } = useAppSelector((state) => state.player);
 
-  useEffect(() => {
-    if (!active) {
-      track = new Audio();
-    } else {
-      // при запуске нового трека выставляем настройки на базовые
-      // начинаем песню с начала, выставляем громкость
-      if (track) {
-        track.src = `${process.env.NEXT_PUBLIC_MINIO_URL}/${active.trackUrl}`;
-        track.volume = volume / 100;
-        track.onloadedmetadata = () => {
-          dispatch(setDurationTrack(Math.ceil(track!.duration)));
-        };
-        track.ontimeupdate = () => {
-          dispatch(setCurrentTimeTrack(Math.ceil(track!.currentTime)));
-        };
+  // Создаем элемент аудио
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-        // включаем трек
-        track.play();
-      }
+  useEffect(() => {
+    const audio = new Audio();
+    audioRef.current = audio;
+
+    return () => {
+      audio.pause();
+    };
+  }, []);
+
+  useEffect(() => {
+    // при запуске нового трека выставляем настройки на базовые
+    // начинаем песню с начала, выставляем громкость
+    if (queue && audioRef.current) {
+      // останавливаем трек для защиты от гонок
+      audioRef.current.pause();
+      audioRef.current.src = `${process.env.NEXT_PUBLIC_MINIO_URL}/${queue[active!].trackUrl}`;
+      audioRef.current.volume = volume / 100;
+      audioRef.current.onloadedmetadata = () => {
+        dispatch(setDurationTrack(Math.ceil(audioRef.current!.duration)));
+      };
+      audioRef.current.ontimeupdate = () => {
+        dispatch(setCurrentTimeTrack(Math.ceil(audioRef.current!.currentTime)));
+      };
+
+      // включаем трек
+      audioRef.current.play();
+    } else {
+      audioRef.current = new Audio();
     }
-  }, [active]);
+  }, [active, queue, audioRef.current]);
 
   // отдельный useEffect для паузы и возобновления трека
   // если isPaused изменился даже в другом месте
   // например кнопка паузы в TrackItem
   useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
     if (isPaused) {
-      track?.pause();
-    } else if (!isPaused) {
-      track?.play();
+      audio.pause();
+    } else {
+      audio.play().catch(() => {});
     }
   }, [isPaused]);
 
-  // todo: потом сделать проверку есть ли следующий трек, если есть - переключать на него
   useEffect(() => {
-    if (currentTime === duration || currentTime > duration) {
-      dispatch(pauseTrack());
-      dispatch(setCurrentTimeTrack(0));
-      track?.pause();
-      track!.currentTime = 0;
-    }
-  }, [currentTime, duration]);
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleEnded = () => {
+      if (!queue || active == null) return;
+
+      if (repeatMode === "one") {
+        dispatch(setCurrentTimeTrack(0));
+        audio.currentTime = 0;
+        audio.play();
+      } else if (repeatMode === "all") {
+        dispatch(nextTrack());
+      } else if (repeatMode === "off") {
+        if (active === queue.length - 1) {
+          dispatch(pauseTrack());
+          return;
+        }
+        dispatch(nextTrack());
+      }
+    };
+
+    audio.addEventListener("ended", handleEnded);
+
+    return () => {
+      audio.removeEventListener("ended", handleEnded);
+    };
+  }, [repeatMode, active, queue]);
+
+  // ************************************************************************
 
   function trackStatusToggle() {
-    if (isPaused && duration === currentTime) {
+    if (isPaused) {
       dispatch(playTrack());
-      track?.play();
-    } else if (isPaused) {
-      dispatch(playTrack());
-      track?.play();
+      audioRef.current?.play();
     } else {
       dispatch(pauseTrack());
-      track?.pause();
+      audioRef.current?.pause();
     }
   }
 
   function setTrackVolume(vol: number) {
-    if (track) {
+    if (audioRef.current) {
       dispatch(setVolumeTrack(vol));
-      track.volume = vol / 100;
+      audioRef.current.volume = vol / 100;
     }
   }
 
   function setTrackCurrentTime(time: number) {
-    if (track) {
+    if (audioRef.current) {
       dispatch(setCurrentTimeTrack(time));
-      track.currentTime = time;
+      audioRef.current.currentTime = time;
     }
   }
 
-  if (!active) {
-    return null;
+  function changeActiveTrack(type: "next" | "previous"): void {
+    if (isPaused) {
+      dispatch(playTrack());
+    }
+
+    if (type == "next") {
+      dispatch(nextTrack());
+    }
+
+    if (type == "previous") {
+      dispatch(previousTrack());
+    }
+  }
+
+  if (!queue) {
+    return;
   }
 
   return (
@@ -104,17 +161,25 @@ const Player: React.FC = () => {
       <div className="flex items-center gap-5">
         <img
           className="object-cover size-16"
-          src={`${process.env.NEXT_PUBLIC_MINIO_URL}/${active?.pictureUrl}`}
+          src={`${process.env.NEXT_PUBLIC_MINIO_URL}/${queue[active!]?.pictureUrl}`}
           alt="Обложка трека"
         />
         <div className="text-zinc-100">
-          <p className="font-medium">{active?.name}</p>
-          <p className="text-sm text-zinc-400">{active?.author}</p>
+          <p className="font-medium">{queue[active!]?.name}</p>
+          <p className="text-sm text-zinc-400">{queue[active!]?.author}</p>
         </div>
       </div>
       <div className="m-auto w-fit flex flex-col items-center">
-        <div onClick={() => trackStatusToggle()}>
-          {isPaused ? <PlayArrow /> : <Pause />}
+        <div className="flex justify-center gap-5">
+          <IconButton onClick={() => changeActiveTrack("previous")}>
+            <SkipPreviousIcon />
+          </IconButton>
+          <IconButton onClick={() => trackStatusToggle()}>
+            {isPaused ? <PlayArrow /> : <Pause />}
+          </IconButton>
+          <IconButton onClick={() => changeActiveTrack("next")}>
+            <SkipNextIcon />
+          </IconButton>
         </div>
         <TrackProgress
           left={currentTime}
@@ -123,13 +188,24 @@ const Player: React.FC = () => {
           onChange={(e) => setTrackCurrentTime(Number(e.target.value))}
         />
       </div>
-      <div className="ml-auto w-fit flex">
-        {volume !== 0 ? <VolumeUp /> : <VolumeMute />}
-        <TrackProgress
-          left={volume}
-          right={100}
-          onChange={(e) => setTrackVolume(Number(e.target.value))}
-        />
+      <div className="ml-auto w-fit flex gap-5">
+        <IconButton
+          onClick={() => {
+            dispatch(toggleRepeatMode());
+          }}
+        >
+          {repeatMode === "off" && <RepeatIcon />}
+          {repeatMode === "all" && <RepeatOnIcon />}
+          {repeatMode === "one" && <RepeatOneOnIcon />}
+        </IconButton>
+        <div className="flex gap-2 items-center">
+          {volume !== 0 ? <VolumeUp /> : <VolumeMute />}
+          <TrackProgress
+            left={volume}
+            right={100}
+            onChange={(e) => setTrackVolume(Number(e.target.value))}
+          />
+        </div>
       </div>
     </Card>
   );

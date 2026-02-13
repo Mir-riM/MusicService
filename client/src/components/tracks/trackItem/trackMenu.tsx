@@ -2,9 +2,17 @@ import * as React from "react";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Fade from "@mui/material/Fade";
-import { Collapse, IconButton, Typography } from "@mui/material";
+import {
+  ClickAwayListener,
+  Collapse,
+  Grow,
+  IconButton,
+  Paper,
+  Popper,
+  Typography,
+} from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
-import { Add, Check, Delete } from "@mui/icons-material";
+import { Add, Check, ChevronRight, Delete } from "@mui/icons-material";
 import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
 import ExpandMore from "../../expandMore/expandMore";
 import {
@@ -28,6 +36,23 @@ export default function TrackMenu({ track }: TrackMenuProps) {
 
   const { user, initialized } = useAppSelector((store) => store.auth);
 
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const [playlistAnchor, setPlaylistAnchor] =
+    React.useState<null | HTMLElement>(null);
+
+  const open = Boolean(anchorEl);
+  const playlistOpen = Boolean(playlistAnchor);
+
+  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+    setPlaylistAnchor(null);
+  };
+
   useEffect(() => {
     if (!initialized) return;
 
@@ -50,16 +75,6 @@ export default function TrackMenu({ track }: TrackMenuProps) {
       error: toggleTrackInPlaylistRequestError,
     },
   ] = useToggleTrackInPlaylistMutation();
-
-  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-  const open = Boolean(anchorEl);
-  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
-    event.stopPropagation();
-    setAnchorEl(event.currentTarget);
-  };
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
 
   const [expanded, setExpanded] = React.useState(false);
 
@@ -103,75 +118,115 @@ export default function TrackMenu({ track }: TrackMenuProps) {
       </IconButton>
       <Menu
         id="fade-menu"
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleClose}
+        slots={{ transition: Fade }}
         slotProps={{
           list: {
             "aria-labelledby": "fade-button",
           },
         }}
-        slots={{ transition: Fade }}
-        anchorEl={anchorEl}
-        open={open}
-        onClose={handleClose}
       >
-        <MenuItem className="flex flex-col" onClick={handleExpandClick}>
+        <MenuItem
+          onMouseEnter={(e) => setPlaylistAnchor(e.currentTarget)}
+          onClick={(e) => setPlaylistAnchor(e.currentTarget)}
+          className="flex justify-between"
+        >
           <div className="flex items-center gap-2">
             <PlaylistAddIcon />
-            <p>Добавить в плейлист</p>
-
-            <ExpandMore
-              expanded={expanded}
-              onClick={(e) => {
-                e.stopPropagation();
-                setExpanded((v) => !v);
-              }}
-              className="ml-auto"
-            />
+            Добавить в плейлист
+            <ChevronRight />
           </div>
         </MenuItem>
-        <Collapse in={expanded} timeout="auto" unmountOnExit>
-          {playlistTrackLinkRequestIsLoading && (
-            <Typography variant="body2" color="textSecondary">
-              Загрузка плейлистов...
-            </Typography>
-          )}
 
-          {!playlistTrackLinkRequestIsLoading && (
-            <div className="py-2 bg-zinc-800">
-              <MenuItem
-                onClick={() => router.push("/playlists/create")}
-                className="flex gap-2"
-              >
-                <Add />
-                Добавить плейлист
-              </MenuItem>
-              {playlistTrackLink?.map((playlist, index) => (
-                <MenuItem
-                  onClick={() => toggleTrackInPlaylistsHandler(playlist._id)}
-                  key={index}
-                  className="flex gap-2 justify-between w-full"
-                >
-                  <Typography
-                    noWrap
-                    sx={{
-                      maxWidth: 200,
-                    }}
-                  >
-                    {playlist.name}
-                  </Typography>
-                  {playlist.tracks.some(
-                    (playlistTrack) => playlistTrack.trackId === track._id,
-                  ) && <Check />}
-                </MenuItem>
-              ))}
-            </div>
-          )}
-        </Collapse>
-
-        <MenuItem className="flex gap-2" onClick={handleClose}>
+        <MenuItem
+          className="flex gap-2"
+          onClick={() => {
+            handleClose();
+            // твоя логика удаления
+          }}
+        >
           <Delete fontSize="small" />
-          <p>Удалить трек</p>
+          Удалить трек
         </MenuItem>
       </Menu>
+
+      <Popper
+        open={playlistOpen}
+        anchorEl={playlistAnchor}
+        placement="right-start"
+        transition
+        modifiers={[
+          {
+            name: "offset",
+            options: {
+              offset: [8, 0], // отступ вправо
+            },
+          },
+        ]}
+        sx={{
+          zIndex: 2000, // выше чем Menu
+        }}
+      >
+        {({ TransitionProps }) => (
+          <Grow {...TransitionProps} timeout={150}>
+            <Paper
+              sx={{
+                minWidth: 260,
+                maxHeight: "60vh",
+                overflowY: "auto",
+                boxShadow: 8,
+                borderRadius: 1,
+              }}
+            >
+              <MenuItem
+                onClick={() => {
+                  setPlaylistAnchor(null);
+                  handleClose();
+                  router.push("/playlists/create");
+                }}
+              >
+                <Add sx={{ mr: 1 }} />
+                Создать плейлист
+              </MenuItem>
+
+              {playlistTrackLinkRequestIsLoading && (
+                <MenuItem disabled>
+                  <Typography variant="body2">Загрузка...</Typography>
+                </MenuItem>
+              )}
+
+              {!playlistTrackLinkRequestIsLoading &&
+                playlistTrackLink?.map((playlist) => (
+                  <MenuItem
+                    key={playlist._id}
+                    onClick={() => {
+                      toggleTrackInPlaylistsHandler(playlist._id);
+                      setPlaylistAnchor(null);
+                    }}
+                    sx={{ display: "flex", justifyContent: "space-between" }}
+                  >
+                    <span
+                      style={{
+                        maxWidth: 180,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {playlist.name}
+                    </span>
+
+                    {playlist.tracks.some(
+                      (playlistTrack) => playlistTrack.trackId === track._id,
+                    ) && <Check />}
+                  </MenuItem>
+                ))}
+            </Paper>
+          </Grow>
+        )}
+      </Popper>
     </div>
   );
 }

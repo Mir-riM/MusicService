@@ -9,7 +9,7 @@ const ListTracks = ({ tracks }: ListTracksProps) => {
   return (
     <div className="flex flex-col gap-4">
       {tracks.map((track) => (
-        <TrackItem key={track._id} track={track} />
+        <TrackItem key={track._id} currentPlaylist={tracks} track={track} />
       ))}
     </div>
   );

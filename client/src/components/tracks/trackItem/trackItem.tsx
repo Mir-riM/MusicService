@@ -13,23 +13,32 @@ import LikeButtonTrack from "./like";
 
 interface TrackItemProps {
   track: ITrack;
-  active?: boolean;
+  // active?: boolean;
+  currentPlaylist: ITrack[];
 }
 
-const TrackItem = ({ track }: TrackItemProps) => {
+const TrackItem = ({ track, currentPlaylist }: TrackItemProps) => {
   const router = useRouter();
   const dispatch = useAppDispatch();
 
-  const { active, pause: isPaused } = useAppSelector((state) => state.player);
+  const {
+    queue: activeQueue,
+    active: activeTrackKey,
+    pause: isPaused,
+  } = useAppSelector((state) => state.player);
 
-  function togglePlayStatus(e: React.MouseEvent<HTMLDivElement>) {
-    e.stopPropagation();
-    if (active?._id === track._id && !isPaused) {
+  function togglePlayStatus() {
+    if (activeQueue?.[activeTrackKey!]._id === track._id && !isPaused) {
       dispatch(pauseTrack());
-    } else if (active?._id === track._id && isPaused) {
+    } else if (activeQueue?.[activeTrackKey!]._id === track._id && isPaused) {
       dispatch(playTrack());
     } else {
-      dispatch(setActiveTrack(track));
+      dispatch(
+        setActiveTrack({
+          trackKey: currentPlaylist.indexOf(track),
+          queue: currentPlaylist,
+        }),
+      );
       dispatch(playTrack());
     }
   }
@@ -55,9 +64,13 @@ const TrackItem = ({ track }: TrackItemProps) => {
       </div>
       <div
         className="m-auto w-fit cursor-pointer p-1 rounded-full bg-zinc-600 hover:bg-zinc-700 transition"
-        onClick={(e) => togglePlayStatus(e)}
+        onClick={() => togglePlayStatus()}
       >
-        {active?._id === track._id && !isPaused ? <Pause /> : <PlayArrow />}
+        {activeQueue?.[activeTrackKey!]?._id === track._id && !isPaused ? (
+          <Pause />
+        ) : (
+          <PlayArrow />
+        )}
       </div>
       <div className="ml-auto flex gap-5">
         <LikeButtonTrack track={track} />

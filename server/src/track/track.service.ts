@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Track, TrackDocument } from './schemas/track.schema';
 import { Comment, CommentDocument } from './schemas/comment.schema';
@@ -24,22 +28,27 @@ export class TrackService {
     picture: MulterFile,
     track: MulterFile,
   ): Promise<Track> {
-    const trackPath = await this.minioService.putObject(
-      track,
-      MinioBucket.TRACKS,
-    );
-    const picturePath = await this.minioService.putObject(
-      picture,
-      MinioBucket.PICTURES,
-    );
+    try {
+      const trackPath = await this.minioService.putObject(
+        track,
+        MinioBucket.TRACKS,
+      );
+      const picturePath = await this.minioService.putObject(
+        picture,
+        MinioBucket.PICTURES,
+      );
 
-    const trackResponce = await this.trackModel.create({
-      ...dto,
-      listenings: 0,
-      pictureUrl: picturePath,
-      trackUrl: trackPath,
-    });
-    return trackResponce;
+      const trackResponce = await this.trackModel.create({
+        ...dto,
+        listenings: 0,
+        pictureUrl: picturePath,
+        trackUrl: trackPath,
+      });
+      return trackResponce;
+    } catch (e) {
+      console.error('CREATE TRACK ERROR:', e);
+      throw new InternalServerErrorException(e.message);
+    }
   }
 
   async getAll(count: number, offset: number): Promise<Track[]> {
