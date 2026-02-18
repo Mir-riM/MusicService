@@ -8,6 +8,9 @@ services:
     container_name: tatar-music-server
     ports:
       - "4000:4000"
+    depends_on:
+      - mongodb
+      - minio
     environment:
       - PORT=4000
       - MONGO_DB_CONNECT_LINK=mongodb://root:61234094@mongodb/?appName=Cluster0

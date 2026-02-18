@@ -3,14 +3,23 @@ import {
   PutObjectCommand,
   GetObjectCommand,
   DeleteObjectCommand,
+  CreateBucketCommand,
+  HeadBucketCommand,
+  PutBucketPolicyCommand,
 } from '@aws-sdk/client-s3';
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, OnModuleInit } from '@nestjs/common';
 import { MinioBucket } from './types/minio';
 import * as uuid from 'uuid';
 import { MulterFile } from '../common/types/multer.types';
 
+const BUCKETS: MinioBucket[] = [
+  MinioBucket.TRACKS,
+  MinioBucket.PICTURES,
+  MinioBucket.PLAYLISTS,
+];
+
 @Injectable()
-export class MinioService {
+export class MinioService implements OnModuleInit {
   private readonly s3: S3Client;
 
   constructor() {
@@ -23,6 +32,58 @@ export class MinioService {
       },
       forcePathStyle: true,
     });
+  }
+
+  async onModuleInit() {
+    const maxAttempts = 5;
+    const delayMs = 2000;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        await this.ensureBuckets();
+        return;
+      } catch (err: any) {
+        if (attempt === maxAttempts) {
+          console.error('MinIO ensureBuckets failed after', maxAttempts, 'attempts:', err?.message ?? err);
+          throw err;
+        }
+        console.warn(`MinIO not ready (attempt ${attempt}/${maxAttempts}), retrying in ${delayMs}ms...`);
+        await new Promise((r) => setTimeout(r, delayMs));
+      }
+    }
+  }
+
+  /** Creates public buckets if they do not exist (for MinIO on container startup). */
+  private async ensureBuckets() {
+    for (const bucket of BUCKETS) {
+      try {
+        await this.s3.send(new HeadBucketCommand({ Bucket: bucket }));
+      } catch (err: any) {
+        const isMissing =
+          err?.name === 'NotFound' ||
+          err?.name === 'NoSuchBucket' ||
+          err?.$metadata?.httpStatusCode === 404;
+        if (isMissing) {
+          await this.s3.send(new CreateBucketCommand({ Bucket: bucket }));
+          const policy = JSON.stringify({
+            Version: '2012-10-17',
+            Statement: [
+              {
+                Effect: 'Allow',
+                Principal: '*',
+                Action: ['s3:GetObject'],
+                Resource: [`arn:aws:s3:::${bucket}/*`],
+              },
+            ],
+          });
+          await this.s3.send(
+            new PutBucketPolicyCommand({ Bucket: bucket, Policy: policy }),
+          );
+          console.log(`MinIO bucket created and set public: ${bucket}`);
+        } else {
+          throw err;
+        }
+      }
+    }
   }
 
   async putObject(file: MulterFile, bucket: MinioBucket): Promise<string> {
