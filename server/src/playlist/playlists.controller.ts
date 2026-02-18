@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { PlaylistsService } from './playlists.service';
 import { JwtAuthGuard } from '../common/guards/auth.guard';
+import { OptionalJwtAuthGuard } from '../common/guards/optional-auth.guard';
 import { CreatePlaylistDto } from './dto/createPlaylist.dto';
 import { ToggleTrackInPlaylistDto } from './dto/toggleTrackInPlaylistDto.dto';
 import { SubscribeOnPlaylistDto } from './dto/subscribeOnPlaylist.dto';
@@ -23,6 +24,8 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { MulterFile } from '../common/types/multer.types';
 import type { AuthRequest } from '../common/types/authRequest';
 import { PaginationQueryDto } from '../common/dto/paginationQuery.dto';
+import type { Request } from 'express';
+import type { JwtPayload } from '../jwt/types/jwtPayload';
 
 @Controller('playlists')
 export class PlaylistsController {
@@ -73,9 +76,42 @@ export class PlaylistsController {
     return this.playlistsService.edit(data, picture, req.user.id);
   }
 
+  @UseGuards(OptionalJwtAuthGuard)
+  @Get('/popular')
+  async getPopular(
+    @Req() req: Request & { user?: JwtPayload },
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.playlistsService.getPopular(
+      query.limit,
+      query.offset,
+      req.user?.id,
+    );
+  }
+
+  @UseGuards(OptionalJwtAuthGuard)
+  @Get('/search')
+  async search(
+    @Req() req: Request & { user?: JwtPayload },
+    @Query('query') query: string,
+    @Query() pagination: PaginationQueryDto,
+  ) {
+    return this.playlistsService.search(
+      query,
+      pagination.limit,
+      pagination.offset,
+      req.user?.id,
+    );
+  }
+
+  @UseGuards(OptionalJwtAuthGuard)
   @Get('/:id')
-  async getOne(@Param('id') id: string, @Query() query: PaginationQueryDto) {
-    return this.playlistsService.getOne(id, query.limit, query.offset);
+  async getOne(
+    @Req() req: Request & { user?: JwtPayload },
+    @Param('id') id: string,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.playlistsService.getOne(id, query.limit, query.offset, req.user?.id);
   }
 
   @UseGuards(JwtAuthGuard)

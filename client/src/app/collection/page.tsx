@@ -1,9 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useGetUserPlaylistsQuery } from "../../api/playlists";
-import {
-  useGetTracksLikedUserQuery,
-} from "../../api/tracks";
+import { useGetTracksLikedUserQuery } from "../../api/tracks";
 import TrackList from "../../components/tracks/trackList";
 import { AuthGuard } from "../../guards/authGuard";
 import MainLayout from "../../layouts/MainLayout";
@@ -99,19 +97,16 @@ const CollectionPage = () => {
                 Создать плейлист
               </h6>
             </Card>
-            {playlistsPagination.items.length > 0 ? (
-              playlistsPagination.items.map((playlist, index) => (
-                <PlaylistCard
-                  key={index}
-                  id={playlist._id}
-                  pictureUrl={playlist.pictureUrl}
-                  name={playlist.name}
-                  subscribersCount={playlist.subscribersCount}
-                />
-              ))
-            ) : (
-              <p>Вы пока не добавляли плейлисты...</p>
-            )}
+
+            {playlistsPagination.items.map((playlist, index) => (
+              <PlaylistCard
+                key={index}
+                id={playlist._id}
+                pictureUrl={playlist.pictureUrl}
+                name={playlist.name}
+                subscribersCount={playlist.subscribersCount}
+              />
+            ))}
           </div>
           {playlistsPagination.hasMore && (
             <div className="text-center mt-5">

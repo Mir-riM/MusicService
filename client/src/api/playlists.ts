@@ -36,6 +36,23 @@ export const playlistsApi = createApi({
       },
       providesTags: ["userPlaylists"],
     }),
+    getPopularPlaylists: builder.query<
+      PaginatedResponse<IPlaylist>,
+      { limit?: number; offset?: number } | void
+    >({
+      query: (args) => {
+        const limit = args?.limit ?? 20;
+        const offset = args?.offset ?? 0;
+        return `playlists/popular?limit=${limit}&offset=${offset}`;
+      },
+    }),
+    searchPlaylists: builder.query<
+      PaginatedResponse<IPlaylist>,
+      { query: string; limit?: number; offset?: number }
+    >({
+      query: ({ query, limit = 20, offset = 0 }) =>
+        `playlists/search?query=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}`,
+    }),
     getUserPlaylistWithTracks: builder.query<
       IPlaylistWithTracks,
       { id: string; limit?: number; offset?: number }
@@ -132,6 +149,8 @@ export const playlistsApi = createApi({
 
 export const {
   useGetUserPlaylistsQuery,
+  useGetPopularPlaylistsQuery,
+  useSearchPlaylistsQuery,
   useGetUserPlaylistWithTracksQuery,
   useGetPlaylistSubscriptionStatusQuery,
   useGetPlaylistTrackLinkQuery,

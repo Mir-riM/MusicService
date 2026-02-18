@@ -30,7 +30,7 @@ interface AppBarProps extends MuiAppBarProps {
   open?: boolean;
 }
 
-const menuItems: { name: string; path: string; icon: keyof typeof ICONS }[] = [
+const baseMenuItems: { name: string; path: string; icon: keyof typeof ICONS }[] = [
   { name: "Главная", path: "/", icon: "Home" },
   { name: "Коллекции", path: "/collection", icon: "User" },
 ];
@@ -73,6 +73,20 @@ export default function Navbar() {
 
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
+  const menuItems = React.useMemo(
+    () =>
+      user
+        ? [
+            ...baseMenuItems,
+            {
+              name: "Загруженные треки",
+              path: "/tracks/uploaded",
+              icon: "MusicNote" as const,
+            },
+          ]
+        : baseMenuItems,
+    [user],
+  );
 
   const handleDrawerOpen = () => {
     setOpen(true);

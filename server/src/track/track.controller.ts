@@ -109,4 +109,14 @@ export class TrackController {
       query.offset,
     );
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('/uploaded/me')
+  async getUploadedTracks(@Req() req: AuthRequest, @Query() query: PaginationQueryDto) {
+    return await this.trackService.getUploadedByUser(
+      req.user.id,
+      query.limit,
+      query.offset,
+    );
+  }
 }

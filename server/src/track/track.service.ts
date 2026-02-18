@@ -213,4 +213,41 @@ export class TrackService {
       },
     };
   }
+
+  async getUploadedByUser(
+    userId: string,
+    limit?: number,
+    offset?: number,
+  ): Promise<PaginatedResponse<Track>> {
+    const pagination = this.resolvePagination(limit, offset);
+    if (!Types.ObjectId.isValid(userId)) {
+      return {
+        items: [],
+        pageInfo: {
+          ...pagination,
+          total: 0,
+          hasMore: false,
+        },
+      };
+    }
+
+    const filter = { ownerId: new Types.ObjectId(userId) };
+    const [items, total] = await Promise.all([
+      this.trackModel
+        .find(filter)
+        .sort({ createdAt: -1, _id: -1 })
+        .skip(pagination.offset)
+        .limit(pagination.limit),
+      this.trackModel.countDocuments(filter),
+    ]);
+
+    return {
+      items,
+      pageInfo: {
+        ...pagination,
+        total,
+        hasMore: pagination.offset + items.length < total,
+      },
+    };
+  }
 }

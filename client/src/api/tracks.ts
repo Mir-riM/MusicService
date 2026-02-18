@@ -47,6 +47,14 @@ export const tracksApi = createApi({
       },
       providesTags: ["LikeTrack"],
     }),
+    getUploadedTracks: builder.query<PaginatedResponse<ITrack>, PaginationArgs | void>({
+      query: (args) => {
+        const limit = args?.limit ?? 20;
+        const offset = args?.offset ?? 0;
+        return `/tracks/uploaded/me?limit=${limit}&offset=${offset}`;
+      },
+      providesTags: ["allTracks"],
+    }),
     createTrack: builder.mutation<ITrack, FormData>({
       query: (formData) => {
         return {
@@ -124,6 +132,7 @@ export const {
   useGetTrackByIdQuery,
   useGetTracksBySearchQuery,
   useGetTracksLikedUserQuery,
+  useGetUploadedTracksQuery,
   useGetTracksLikedListUserQuery,
   useCreateTrackMutation,
   useDeleteTrackMutation,

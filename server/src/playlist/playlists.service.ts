@@ -42,6 +42,21 @@ export class PlaylistsService {
     };
   }
 
+  private canViewPlaylist(
+    playlist: Pick<Playlist, 'isPublic' | 'ownerId'>,
+    userId?: string,
+  ): boolean {
+    if (playlist.isPublic) {
+      return true;
+    }
+
+    if (!userId) {
+      return false;
+    }
+
+    return playlist.ownerId.toString() === userId;
+  }
+
   private async getSubscribersCountMap(
     playlistIds: string[],
   ): Promise<Map<string, number>> {
@@ -112,6 +127,7 @@ export class PlaylistsService {
     id: string,
     limit?: number,
     offset?: number,
+    userId?: string,
   ): Promise<PlaylistWithTracks> {
     const pagination = this.resolvePagination(limit, offset);
     const playlist = await this.playlistModel.findById(id);
@@ -127,6 +143,10 @@ export class PlaylistsService {
     ]);
 
     if (!playlist) {
+      throw new NotFoundException('Playlist not found');
+    }
+
+    if (!this.canViewPlaylist(playlist, userId)) {
       throw new NotFoundException('Playlist not found');
     }
 
@@ -178,6 +198,11 @@ export class PlaylistsService {
       .map((playlistId) => {
         const playlist = playlistsById.get(playlistId.toString());
         if (!playlist) return null;
+
+        const ownerId = playlist.ownerId?.toString?.() ?? String(playlist.ownerId);
+        const visible = playlist.isPublic || ownerId === userId;
+        if (!visible) return null;
+
         return {
           ...playlist,
           subscribersCount: subscribersCountMap.get(playlistId.toString()) ?? 0,
@@ -224,6 +249,114 @@ export class PlaylistsService {
         },
       },
     ]);
+  }
+
+  async getPopular(
+    limit?: number,
+    offset?: number,
+    userId?: string,
+  ): Promise<PaginatedResponse<Playlist>> {
+    const pagination = this.resolvePagination(limit, offset);
+    const visibilityMatch =
+      userId && mongoose.Types.ObjectId.isValid(userId)
+        ? {
+          $or: [
+            { isPublic: true },
+            { ownerId: new mongoose.Types.ObjectId(userId) },
+          ],
+        }
+        : { isPublic: true };
+
+    const [items, total] = await Promise.all([
+      this.playlistModel.aggregate([
+        { $match: visibilityMatch },
+        {
+          $lookup: {
+            from: 'playlistsubscriptions',
+            localField: '_id',
+            foreignField: 'playlistId',
+            as: 'subs',
+          },
+        },
+        {
+          $addFields: {
+            subscribersCount: { $size: '$subs' },
+          },
+        },
+        { $project: { subs: 0 } },
+        { $sort: { subscribersCount: -1, createdAt: -1, _id: -1 } },
+        { $skip: pagination.offset },
+        { $limit: pagination.limit },
+      ]),
+      this.playlistModel.countDocuments(visibilityMatch),
+    ]);
+
+    return {
+      items,
+      pageInfo: {
+        ...pagination,
+        total,
+        hasMore: pagination.offset + items.length < total,
+      },
+    };
+  }
+
+  async search(
+    query: string,
+    limit?: number,
+    offset?: number,
+    userId?: string,
+  ): Promise<PaginatedResponse<Playlist>> {
+    const pagination = this.resolvePagination(limit, offset);
+    const normalizedQuery = query.trim();
+    const searchByName = { name: { $regex: new RegExp(normalizedQuery, 'i') } };
+
+    const visibilityMatch =
+      userId && mongoose.Types.ObjectId.isValid(userId)
+        ? {
+          $or: [
+            { isPublic: true },
+            { ownerId: new mongoose.Types.ObjectId(userId) },
+          ],
+        }
+        : { isPublic: true };
+
+    const filter = {
+      $and: [visibilityMatch, searchByName],
+    };
+
+    const [items, total] = await Promise.all([
+      this.playlistModel.aggregate([
+        { $match: filter },
+        {
+          $lookup: {
+            from: 'playlistsubscriptions',
+            localField: '_id',
+            foreignField: 'playlistId',
+            as: 'subs',
+          },
+        },
+        {
+          $addFields: {
+            subscribersCount: { $size: '$subs' },
+          },
+        },
+        { $project: { subs: 0 } },
+        { $sort: { subscribersCount: -1, createdAt: -1, _id: -1 } },
+        { $skip: pagination.offset },
+        { $limit: pagination.limit },
+      ]),
+      this.playlistModel.countDocuments(filter),
+    ]);
+
+    return {
+      items,
+      pageInfo: {
+        ...pagination,
+        total,
+        hasMore: pagination.offset + items.length < total,
+      },
+    };
   }
 
   async isUserSubscribed(

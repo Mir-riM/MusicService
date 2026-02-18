@@ -12,10 +12,11 @@ import {
   PlaylistSubscriptionSchema,
 } from './schemas/playlistSubscription.schema';
 import { MinioModule } from '../minio/minio.module';
+import { OptionalJwtAuthGuard } from '../common/guards/optional-auth.guard';
 
 @Module({
   controllers: [PlaylistsController],
-  providers: [PlaylistsService],
+  providers: [PlaylistsService, OptionalJwtAuthGuard],
   imports: [
     MongooseModule.forFeature([
       { name: Playlist.name, schema: PlaylistSchema },
