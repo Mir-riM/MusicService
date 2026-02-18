@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UploadedFile,
   UseGuards,
@@ -21,6 +22,7 @@ import { EditPlaylistDto } from './dto/editPlaylist.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { MulterFile } from '../common/types/multer.types';
 import type { AuthRequest } from '../common/types/authRequest';
+import { PaginationQueryDto } from '../common/dto/paginationQuery.dto';
 
 @Controller('playlists')
 export class PlaylistsController {
@@ -72,14 +74,21 @@ export class PlaylistsController {
   }
 
   @Get('/:id')
-  async getOne(@Param('id') id: string) {
-    return this.playlistsService.getOne(id);
+  async getOne(@Param('id') id: string, @Query() query: PaginationQueryDto) {
+    return this.playlistsService.getOne(id, query.limit, query.offset);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('/user/me')
-  async getPlaylistsBySubscriber(@Req() req: AuthRequest) {
-    return this.playlistsService.getPlaylistsBySubscriber(req.user.id);
+  async getPlaylistsBySubscriber(
+    @Req() req: AuthRequest,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.playlistsService.getPlaylistsBySubscriber(
+      req.user.id,
+      query.limit,
+      query.offset,
+    );
   }
 
   @UseGuards(JwtAuthGuard)

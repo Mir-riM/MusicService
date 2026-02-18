@@ -16,10 +16,12 @@ import { EditPlaylistDto } from './dto/editPlaylist.dto';
 import { MinioService } from '../minio/minio.service';
 import { MinioBucket } from '../minio/types/minio';
 import { MulterFile } from '../common/types/multer.types';
+import { PageInfo, PaginatedResponse } from '../common/types/pagination';
 
 export interface PlaylistWithTracks extends Playlist {
   tracks: PlaylistTracks[];
   subscribersCount: number;
+  tracksPageInfo: PageInfo;
 }
 
 @Injectable()
@@ -33,17 +35,37 @@ export class PlaylistsService {
     private minioService: MinioService,
   ) { }
 
+  private resolvePagination(limit?: number, offset?: number) {
+    return {
+      limit: Math.min(Math.max(limit ?? 20, 1), 50),
+      offset: Math.max(offset ?? 0, 0),
+    };
+  }
+
   private async getSubscribersCountMap(
     playlistIds: string[],
   ): Promise<Map<string, number>> {
-    const counts = await Promise.all(
-      playlistIds.map(async (playlistId) => ({
-        playlistId,
-        count: await this.playlistSubscriberModel.countDocuments({ playlistId }),
-      })),
-    );
+    if (playlistIds.length === 0) {
+      return new Map();
+    }
 
-    return new Map(counts.map((item) => [item.playlistId, item.count]));
+    const counts = await this.playlistSubscriberModel.aggregate([
+      {
+        $match: {
+          playlistId: { $in: playlistIds },
+        },
+      },
+      {
+        $group: {
+          _id: '$playlistId',
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    return new Map(
+      counts.map((item: { _id: string; count: number }) => [item._id, item.count]),
+    );
   }
 
   async create(
@@ -74,13 +96,23 @@ export class PlaylistsService {
     return playlist;
   }
 
-  async getOne(id: string): Promise<PlaylistWithTracks> {
+  async getOne(
+    id: string,
+    limit?: number,
+    offset?: number,
+  ): Promise<PlaylistWithTracks> {
+    const pagination = this.resolvePagination(limit, offset);
     const playlist = await this.playlistModel.findById(id);
 
-    const playlistTracks = await this.playlistTrackModel
-      .find({ playlistId: id })
-      .sort({ position: 1 })
-      .populate('track');
+    const [playlistTracks, totalTracks] = await Promise.all([
+      this.playlistTrackModel
+        .find({ playlistId: id })
+        .sort({ position: 1, _id: 1 })
+        .skip(pagination.offset)
+        .limit(pagination.limit)
+        .populate('track'),
+      this.playlistTrackModel.countDocuments({ playlistId: id }),
+    ]);
 
     if (!playlist) {
       throw new NotFoundException('Playlist not found');
@@ -90,28 +122,65 @@ export class PlaylistsService {
       playlistId: id,
     });
 
-    return { ...playlist.toObject(), tracks: playlistTracks, subscribersCount };
+    return {
+      ...playlist.toObject(),
+      tracks: playlistTracks,
+      subscribersCount,
+      tracksPageInfo: {
+        ...pagination,
+        total: totalTracks,
+        hasMore: pagination.offset + playlistTracks.length < totalTracks,
+      },
+    };
   }
 
-  async getPlaylistsBySubscriber(userId: string): Promise<Playlist[]> {
-    const playlistSubscriptions = await this.playlistSubscriberModel.find({
-      userId,
-    });
+  async getPlaylistsBySubscriber(
+    userId: string,
+    limit?: number,
+    offset?: number,
+  ): Promise<PaginatedResponse<Playlist>> {
+    const pagination = this.resolvePagination(limit, offset);
+    const [playlistSubscriptions, total] = await Promise.all([
+      this.playlistSubscriberModel
+        .find({ userId })
+        .sort({ _id: -1 })
+        .skip(pagination.offset)
+        .limit(pagination.limit),
+      this.playlistSubscriberModel.countDocuments({ userId }),
+    ]);
 
     const playlistIds = playlistSubscriptions.map((ps) => ps.playlistId);
 
-    const playlists = await this.playlistModel.find({
+    const playlists = await this.playlistModel
+      .find({
       _id: { $in: playlistIds },
-    });
+      })
+      .lean();
 
     const subscribersCountMap = await this.getSubscribersCountMap(
-      playlists.map((playlist) => playlist._id.toString()),
+      playlistIds,
     );
 
-    return playlists.map((playlist) => ({
-      ...playlist.toObject(),
-      subscribersCount: subscribersCountMap.get(playlist._id.toString()) ?? 0,
-    }));
+    const playlistsById = new Map(playlists.map((playlist) => [playlist._id.toString(), playlist]));
+    const items = playlistIds
+      .map((playlistId) => {
+        const playlist = playlistsById.get(playlistId.toString());
+        if (!playlist) return null;
+        return {
+          ...playlist,
+          subscribersCount: subscribersCountMap.get(playlistId.toString()) ?? 0,
+        };
+      })
+      .filter(Boolean) as Playlist[];
+
+    return {
+      items,
+      pageInfo: {
+        ...pagination,
+        total,
+        hasMore: pagination.offset + items.length < total,
+      },
+    };
   }
 
   async getPlaylistTrackLink(userId: string) {

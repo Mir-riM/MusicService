@@ -18,6 +18,7 @@ import { JwtAuthGuard } from '../common/guards/auth.guard';
 import { TrackLikeDto } from './dto/trackLike.dto';
 import { MulterFile } from '../common/types/multer.types';
 import type { AuthRequest } from '../common/types/authRequest';
+import { PaginationQueryDto } from '../common/dto/paginationQuery.dto';
 
 @Controller('/tracks')
 export class TrackController {
@@ -59,13 +60,13 @@ export class TrackController {
   }
 
   @Get('all')
-  getAll(@Query('count') count: number, @Query('offset') offset: number) {
-    return this.trackService.getAll(count, offset);
+  getAll(@Query() query: PaginationQueryDto) {
+    return this.trackService.getAll(query.limit, query.offset);
   }
 
   @Get('/search')
-  search(@Query('query') query: string) {
-    return this.trackService.search(query);
+  search(@Query('query') query: string, @Query() pagination: PaginationQueryDto) {
+    return this.trackService.search(query, pagination.limit, pagination.offset);
   }
 
   @Get(':id')
@@ -101,7 +102,11 @@ export class TrackController {
   }
   @UseGuards(JwtAuthGuard)
   @Get('/like/me')
-  async getLikeTracks(@Req() req: AuthRequest) {
-    return await this.trackService.getLikeTracks(req.user.id);
+  async getLikeTracks(@Req() req: AuthRequest, @Query() query: PaginationQueryDto) {
+    return await this.trackService.getLikeTracks(
+      req.user.id,
+      query.limit,
+      query.offset,
+    );
   }
 }

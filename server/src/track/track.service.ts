@@ -14,6 +14,7 @@ import { TrackLikeDto } from './dto/trackLike.dto';
 import { TrackLike } from './schemas/trackLike.schema';
 import { MulterFile } from '../common/types/multer.types';
 import { UserRole } from '../auth/schemas/user.schema';
+import { PaginatedResponse } from '../common/types/pagination';
 
 @Injectable()
 export class TrackService {
@@ -22,6 +23,13 @@ export class TrackService {
     @InjectModel(TrackLike.name) private trackLikeModel: Model<TrackLike>,
     private minioService: MinioService,
   ) { }
+
+  private resolvePagination(limit?: number, offset?: number) {
+    return {
+      limit: Math.min(Math.max(limit ?? 20, 1), 50),
+      offset: Math.max(offset ?? 0, 0),
+    };
+  }
 
   async create(
     dto: createTrackDto,
@@ -53,9 +61,28 @@ export class TrackService {
     }
   }
 
-  async getAll(count: number, offset: number): Promise<Track[]> {
-    const tracks = await this.trackModel.find().skip(offset).limit(count);
-    return tracks;
+  async getAll(
+    limit?: number,
+    offset?: number,
+  ): Promise<PaginatedResponse<Track>> {
+    const pagination = this.resolvePagination(limit, offset);
+    const [items, total] = await Promise.all([
+      this.trackModel
+        .find()
+        .sort({ createdAt: -1, _id: -1 })
+        .skip(pagination.offset)
+        .limit(pagination.limit),
+      this.trackModel.countDocuments(),
+    ]);
+
+    return {
+      items,
+      pageInfo: {
+        ...pagination,
+        total,
+        hasMore: pagination.offset + items.length < total,
+      },
+    };
   }
 
   async getOne(id: string): Promise<Track> {
@@ -99,16 +126,36 @@ export class TrackService {
     );
   }
 
-  async search(query: string): Promise<Track[]> {
+  async search(
+    query: string,
+    limit?: number,
+    offset?: number,
+  ): Promise<PaginatedResponse<Track>> {
+    const pagination = this.resolvePagination(limit, offset);
     query = query.trim().toLocaleLowerCase();
-    const tracks = await this.trackModel.find({
+    const filter = {
       $or: [
         { name: { $regex: new RegExp(query, 'i') } },
         { author: { $regex: new RegExp(query, 'i') } },
       ],
-    });
+    };
+    const [items, total] = await Promise.all([
+      this.trackModel
+        .find(filter)
+        .sort({ createdAt: -1, _id: -1 })
+        .skip(pagination.offset)
+        .limit(pagination.limit),
+      this.trackModel.countDocuments(filter),
+    ]);
 
-    return tracks;
+    return {
+      items,
+      pageInfo: {
+        ...pagination,
+        total,
+        hasMore: pagination.offset + items.length < total,
+      },
+    };
   }
 
   async toggleLike(dto: TrackLikeDto, userId: string): Promise<void> {
@@ -133,14 +180,37 @@ export class TrackService {
     return await this.trackLikeModel.find({ userId });
   }
 
-  async getLikeTracks(userId: string): Promise<TrackDocument[]> {
-    const likes = await this.trackLikeModel
-      .find({ userId })
-      .select('trackId')
-      .lean();
+  async getLikeTracks(
+    userId: string,
+    limit?: number,
+    offset?: number,
+  ): Promise<PaginatedResponse<Track>> {
+    const pagination = this.resolvePagination(limit, offset);
+    const [likes, total] = await Promise.all([
+      this.trackLikeModel
+        .find({ userId })
+        .sort({ _id: -1 })
+        .select('trackId')
+        .skip(pagination.offset)
+        .limit(pagination.limit)
+        .lean(),
+      this.trackLikeModel.countDocuments({ userId }),
+    ]);
 
     const trackIds = likes.map((l) => l.trackId);
+    const tracks = await this.trackModel.find({ _id: { $in: trackIds } });
+    const tracksById = new Map(tracks.map((track) => [track._id.toString(), track]));
+    const orderedTracks = trackIds
+      .map((id) => tracksById.get(id.toString()))
+      .filter(Boolean) as Track[];
 
-    return this.trackModel.find({ _id: { $in: trackIds } });
+    return {
+      items: orderedTracks,
+      pageInfo: {
+        ...pagination,
+        total,
+        hasMore: pagination.offset + orderedTracks.length < total,
+      },
+    };
   }
 }

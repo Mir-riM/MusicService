@@ -1,29 +1,50 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { IComment, ITrack, ITrackLike } from "../types/entries/track";
 import { baseQueryWithReauth } from "./baseQueryReauth";
+import { PaginatedResponse } from "../types/common/pagination";
+
+export type PaginationArgs = {
+  limit?: number;
+  offset?: number;
+};
 
 export const tracksApi = createApi({
   reducerPath: "tracksApi",
   baseQuery: baseQueryWithReauth,
   tagTypes: ["allTracks", "Track", "LikeTrack"],
   endpoints: (builder) => ({
-    getAllTracks: builder.query<ITrack[], void>({
-      query: () => "/tracks/all",
+    getAllTracks: builder.query<PaginatedResponse<ITrack>, PaginationArgs | void>({
+      query: (args) => {
+        const limit = args?.limit ?? 20;
+        const offset = args?.offset ?? 0;
+        return `/tracks/all?limit=${limit}&offset=${offset}`;
+      },
       providesTags: ["allTracks"],
     }),
     getTrackById: builder.query<ITrack, string>({
       query: (id) => `/tracks/${id}`,
       providesTags: ["Track"],
     }),
-    getTracksBySearch: builder.query<ITrack[], string>({
-      query: (query) => `/tracks/search?query=${query}`,
+    getTracksBySearch: builder.query<
+      PaginatedResponse<ITrack>,
+      { query: string; limit?: number; offset?: number }
+    >({
+      query: ({ query, limit = 20, offset = 0 }) =>
+        `/tracks/search?query=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}`,
     }),
     getTracksLikedListUser: builder.query<ITrackLike[], void>({
       query: () => `/tracks/like/links/me`,
       providesTags: ["LikeTrack"],
     }),
-    getTracksLikedUser: builder.query<ITrack[], void>({
-      query: () => `/tracks/like/me`,
+    getTracksLikedUser: builder.query<
+      PaginatedResponse<ITrack>,
+      PaginationArgs | void
+    >({
+      query: (args) => {
+        const limit = args?.limit ?? 20;
+        const offset = args?.offset ?? 0;
+        return `/tracks/like/me?limit=${limit}&offset=${offset}`;
+      },
       providesTags: ["LikeTrack"],
     }),
     createTrack: builder.mutation<ITrack, FormData>({

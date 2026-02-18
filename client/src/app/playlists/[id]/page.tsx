@@ -35,12 +35,20 @@ import { parseApiError } from "../../../shared/errors/parse-api-error";
 import { useAppSelector } from "../../../hooks/store";
 import { enqueueSnackbar } from "notistack";
 import ConfirmDialog from "../../../components/confirmDialog/confirmDialog";
+import { PaginatedResponse } from "../../../types/common/pagination";
+import { usePaginatedList } from "../../../hooks/usePaginatedList";
+
+const PAGE_SIZE = 20;
 
 const PlaylistPage = () => {
   const router = useRouter();
   const params = useParams<{ id: string }>();
 
   const [mode, setMode] = useState<"view" | "edit">("view");
+  const tracksPagination = usePaginatedList<ITrack>({
+    pageSize: PAGE_SIZE,
+    resetDeps: [params.id],
+  });
   const { user, initialized } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
@@ -52,15 +60,22 @@ const PlaylistPage = () => {
   }, [initialized, user, router]);
 
   const { data: playlist, isLoading: playlistIsLoading } =
-    useGetUserPlaylistWithTracksQuery(params.id);
+    useGetUserPlaylistWithTracksQuery({
+      id: params.id,
+      limit: PAGE_SIZE,
+      offset: tracksPagination.offset,
+    });
 
-  const { data: allUserPlaylists } = useGetUserPlaylistsQuery(undefined, {
-    skip: !user?._id,
-  });
+  const { data: allUserPlaylists } = useGetUserPlaylistsQuery(
+    { limit: 1000, offset: 0 },
+    {
+      skip: !user?._id,
+    },
+  );
 
   const isSubscribed = useMemo(
-    () => allUserPlaylists?.some((item) => item._id === playlist?._id),
-    [allUserPlaylists, playlist?._id],
+    () => allUserPlaylists?.items?.some((item) => item._id === playlist?._id),
+    [allUserPlaylists?.items, playlist?._id],
   );
 
   const [editRequest, { isLoading: editRequestIsLoading }] =
@@ -72,7 +87,23 @@ const PlaylistPage = () => {
   const [subscribeRequest, { isLoading: subscribeRequestIsLoading }] =
     useSubscribePlaylistMutation();
 
-  const [tracks, setTracks] = useState<ITrack[]>([]);
+  const tracksPageData = useMemo<PaginatedResponse<ITrack> | undefined>(() => {
+    if (!playlist) return undefined;
+    return {
+      items: playlist.tracks.map((pt) => pt.track),
+      pageInfo: playlist.tracksPageInfo ?? {
+        limit: PAGE_SIZE,
+        offset: 0,
+        total: playlist.tracks.length,
+        hasMore: false,
+      },
+    };
+  }, [playlist]);
+
+  useEffect(() => {
+    tracksPagination.applyPage(tracksPageData);
+  }, [tracksPageData, tracksPagination.applyPage]);
+
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [confirmForkOpen, setConfirmForkOpen] = useState(false);
   const isOwner = playlist?.ownerId === user?._id;
@@ -100,8 +131,6 @@ const PlaylistPage = () => {
 
   useEffect(() => {
     if (!playlistIsLoading && playlist) {
-      setTracks(playlist.tracks.map((pt) => pt.track));
-
       reset({
         name: playlist.name,
         isPublic: playlist.isPublic,
@@ -201,6 +230,10 @@ const PlaylistPage = () => {
         variant: "error",
       });
     }
+  }
+
+  function loadMoreTracksHandler() {
+    tracksPagination.loadMore();
   }
 
   return (
@@ -366,8 +399,17 @@ const PlaylistPage = () => {
       </form>
 
       <div className="mt-10">
-        {tracks.length ? (
-          <TrackList tracks={tracks} />
+        {tracksPagination.items.length ? (
+          <>
+            <TrackList tracks={tracksPagination.items} searchEnabled={false} />
+            {tracksPagination.hasMore && (
+              <div className="text-center mt-5">
+                <Button variant="outlined" onClick={loadMoreTracksHandler}>
+                  Показать еще
+                </Button>
+              </div>
+            )}
+          </>
         ) : (
           <p>В этом плейлисте пока нет треков…</p>
         )}

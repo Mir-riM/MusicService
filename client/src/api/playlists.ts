@@ -5,6 +5,7 @@ import {
   IPlaylistWithTrackLinks,
   IPlaylistWithTracks,
 } from "../types/entries/playlist";
+import { PaginatedResponse } from "../types/common/pagination";
 
 export type UserAndPlaylistDto = {
   playlistId: string;
@@ -24,13 +25,24 @@ export const playlistsApi = createApi({
   tagTypes: ["playlist", "userPlaylists", "playlistTrackLink"],
 
   endpoints: (builder) => ({
-    getUserPlaylists: builder.query<IPlaylist[], void>({
-      query: () => `playlists/user/me`,
+    getUserPlaylists: builder.query<
+      PaginatedResponse<IPlaylist>,
+      { limit?: number; offset?: number } | void
+    >({
+      query: (args) => {
+        const limit = args?.limit ?? 20;
+        const offset = args?.offset ?? 0;
+        return `playlists/user/me?limit=${limit}&offset=${offset}`;
+      },
       providesTags: ["userPlaylists"],
     }),
-    getUserPlaylistWithTracks: builder.query<IPlaylistWithTracks, string>({
-      query: (id) => `playlists/${id}`,
-      providesTags: (result, error, id) => [{ type: "playlist", id }],
+    getUserPlaylistWithTracks: builder.query<
+      IPlaylistWithTracks,
+      { id: string; limit?: number; offset?: number }
+    >({
+      query: ({ id, limit = 20, offset = 0 }) =>
+        `playlists/${id}?limit=${limit}&offset=${offset}`,
+      providesTags: (result, error, arg) => [{ type: "playlist", id: arg.id }],
     }),
 
     getPlaylistTrackLink: builder.query<IPlaylistWithTrackLinks[], void>({

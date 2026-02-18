@@ -1,4 +1,5 @@
 import { ITrack } from "./track";
+import { PageInfo } from "../common/pagination";
 
 export enum PlaylistType {
   SYSTEM = "system",
@@ -25,6 +26,7 @@ export interface IPlaylistWithTracks extends IPlaylist {
     addedAt: string;
     track: ITrack;
   }[];
+  tracksPageInfo?: PageInfo;
 }
 
 export interface IPlaylistTrackLink {
