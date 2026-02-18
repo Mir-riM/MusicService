@@ -13,7 +13,6 @@ import LikeButtonTrack from "./like";
 
 interface TrackItemProps {
   track: ITrack;
-  // active?: boolean;
   currentPlaylist: ITrack[];
 }
 

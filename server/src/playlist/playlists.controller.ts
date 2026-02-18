@@ -76,32 +76,17 @@ export class PlaylistsController {
     return this.playlistsService.edit(data, picture, req.user.id);
   }
 
-  @UseGuards(OptionalJwtAuthGuard)
   @Get('/popular')
-  async getPopular(
-    @Req() req: Request & { user?: JwtPayload },
-    @Query() query: PaginationQueryDto,
-  ) {
-    return this.playlistsService.getPopular(
-      query.limit,
-      query.offset,
-      req.user?.id,
-    );
+  async getPopular(@Query() query: PaginationQueryDto) {
+    return this.playlistsService.getPopular(query.limit, query.offset);
   }
 
-  @UseGuards(OptionalJwtAuthGuard)
   @Get('/search')
   async search(
-    @Req() req: Request & { user?: JwtPayload },
     @Query('query') query: string,
     @Query() pagination: PaginationQueryDto,
   ) {
-    return this.playlistsService.search(
-      query,
-      pagination.limit,
-      pagination.offset,
-      req.user?.id,
-    );
+    return this.playlistsService.search(query, pagination.limit, pagination.offset);
   }
 
   @UseGuards(OptionalJwtAuthGuard)

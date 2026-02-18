@@ -19,7 +19,6 @@ export class PlaylistTracks {
   @Prop({ required: true, default: Date.now })
   addedAt: Date;
 
-  /** Заполняется через .populate('track') */
   track?: Track;
 }
 

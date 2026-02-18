@@ -52,7 +52,6 @@ export class MinioService implements OnModuleInit {
     }
   }
 
-  /** Creates public buckets if they do not exist (for MinIO on container startup). */
   private async ensureBuckets() {
     for (const bucket of BUCKETS) {
       try {

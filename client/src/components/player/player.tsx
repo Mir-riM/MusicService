@@ -147,7 +147,6 @@ const Player: React.FC = () => {
     };
   }, [repeatMode, active, queue]);
 
-  // ************************************************************************
 
   function trackStatusToggle() {
     if (isPaused) {

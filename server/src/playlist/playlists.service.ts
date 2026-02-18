@@ -254,18 +254,9 @@ export class PlaylistsService {
   async getPopular(
     limit?: number,
     offset?: number,
-    userId?: string,
   ): Promise<PaginatedResponse<Playlist>> {
     const pagination = this.resolvePagination(limit, offset);
-    const visibilityMatch =
-      userId && mongoose.Types.ObjectId.isValid(userId)
-        ? {
-          $or: [
-            { isPublic: true },
-            { ownerId: new mongoose.Types.ObjectId(userId) },
-          ],
-        }
-        : { isPublic: true };
+    const visibilityMatch = { isPublic: true };
 
     const [items, total] = await Promise.all([
       this.playlistModel.aggregate([
@@ -305,25 +296,11 @@ export class PlaylistsService {
     query: string,
     limit?: number,
     offset?: number,
-    userId?: string,
   ): Promise<PaginatedResponse<Playlist>> {
     const pagination = this.resolvePagination(limit, offset);
     const normalizedQuery = query.trim();
     const searchByName = { name: { $regex: new RegExp(normalizedQuery, 'i') } };
-
-    const visibilityMatch =
-      userId && mongoose.Types.ObjectId.isValid(userId)
-        ? {
-          $or: [
-            { isPublic: true },
-            { ownerId: new mongoose.Types.ObjectId(userId) },
-          ],
-        }
-        : { isPublic: true };
-
-    const filter = {
-      $and: [visibilityMatch, searchByName],
-    };
+    const filter = { $and: [{ isPublic: true }, searchByName] };
 
     const [items, total] = await Promise.all([
       this.playlistModel.aggregate([
