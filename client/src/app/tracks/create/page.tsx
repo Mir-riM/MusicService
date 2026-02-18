@@ -176,6 +176,7 @@ const CreateTrack = () => {
             Назад
           </Button>
           <Button
+            disabled={isLoading}
             onClick={
               activeStep === maxStep ? form.handleSubmit(onSubmit) : next
             }

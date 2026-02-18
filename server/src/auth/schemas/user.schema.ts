@@ -21,7 +21,7 @@ export class User {
   passwordHash: string;
 
   @Prop({ type: [String], enum: UserRole, default: [UserRole.USER] })
-  roles: ['user'];
+  roles: UserRole[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

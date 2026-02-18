@@ -19,11 +19,13 @@ import { useGetTracksLikedListUserQuery } from "../api/tracks";
 export function Providers({ children }: { children: React.ReactNode }) {
   function AuthInit() {
     const dispatch = useDispatch();
+    
     const {
       data: user,
       isLoading: userIsLoading,
       isUninitialized,
     } = useMeQuery();
+
     const { data: userLikedTracks, isLoading: userLikedTracksIsLoading } =
       useGetTracksLikedListUserQuery(user?._id ?? "", {
         skip: !user?._id,

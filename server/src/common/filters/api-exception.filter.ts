@@ -13,12 +13,12 @@ export class ApiExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
 
-    // 1️⃣ Если это HttpException (401, 400, 403 и т.д.)
+    // Если это HttpException (401, 400, 403 и т.д.)
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
       const res = exception.getResponse();
 
-      // если ты кинул объект { code, message, fields }
+      // если кинул объект { code, message, fields }
       if (typeof res === 'object' && res !== null) {
         return response.status(status).json({
           statusCode: status,
@@ -34,7 +34,7 @@ export class ApiExceptionFilter implements ExceptionFilter {
       });
     }
 
-    // 2️⃣ Любая НЕПРЕДВИДЕННАЯ ошибка
+    // Любая другая ошибка
     console.error(exception);
 
     return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({

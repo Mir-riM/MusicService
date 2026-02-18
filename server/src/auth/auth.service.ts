@@ -26,8 +26,7 @@ export type Tokens = {
 export class AuthService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
-    @InjectModel(RefreshToken.name)
-    private refreshTokenModel: Model<RefreshTokenDocument>,
+    @InjectModel(RefreshToken.name) private refreshTokenModel: Model<RefreshTokenDocument>,
     private jwtAuthService: JwtAuthService,
   ) {}
 
