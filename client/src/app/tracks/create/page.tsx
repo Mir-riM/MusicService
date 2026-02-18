@@ -9,6 +9,8 @@ import { useRouter } from "next/navigation";
 import { AuthGuard } from "../../../guards/authGuard";
 import { Controller, useForm } from "react-hook-form";
 import { CreateTrackForm, stepSchemas } from "../../../shared/schemas/createTrackFrom";
+import { enqueueSnackbar } from "notistack";
+import { parseApiError } from "../../../shared/errors/parse-api-error";
 
 const CreateTrack = () => {
   const router = useRouter();
@@ -27,7 +29,7 @@ const CreateTrack = () => {
   const [activeStep, setActiveStep] = useState(0);
   const maxStep = 2;
 
-  const [createTrack, { isLoading, error }] = useCreateTrackMutation();
+  const [createTrack, { isLoading }] = useCreateTrackMutation();
 
   async function next() {
     const schema = stepSchemas[activeStep];
@@ -57,16 +59,27 @@ const CreateTrack = () => {
   }
 
   async function onSubmit(data: CreateTrackForm) {
-    const formData = new FormData();
+    try {
+      const formData = new FormData();
 
-    formData.append("name", data.name);
-    formData.append("author", data.author);
-    if (data.text) formData.append("text", data.text);
-    if (data.picture) formData.append("picture", data.picture);
-    if (data.track) formData.append("track", data.track);
+      formData.append("name", data.name);
+      formData.append("author", data.author);
+      if (data.text) formData.append("text", data.text);
+      if (data.picture) formData.append("picture", data.picture);
+      if (data.track) formData.append("track", data.track);
 
-    const created = await createTrack(formData).unwrap();
-    router.push(`/tracks/${created._id}`);
+      const created = await createTrack(formData).unwrap();
+      enqueueSnackbar("Трек успешно создан", { variant: "success" });
+      router.push(`/tracks/${created._id}`);
+    } catch (error) {
+      const apiError = parseApiError(error);
+      enqueueSnackbar(
+        `Не удалось создать трек: ${apiError?.message || "Неизвестная ошибка"}`,
+        {
+          variant: "error",
+        },
+      );
+    }
   }
 
   return (

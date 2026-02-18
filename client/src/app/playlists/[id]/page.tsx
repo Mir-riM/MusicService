@@ -50,7 +50,7 @@ const PlaylistPage = () => {
   const { data: playlist, isLoading: playlistIsLoading } =
     useGetUserPlaylistWithTracksQuery(params.id);
 
-  const { data: allUserPlaylists } = useGetUserPlaylistsQuery(user?._id!, {
+  const { data: allUserPlaylists } = useGetUserPlaylistsQuery(undefined, {
     skip: !user?._id,
   });
 
@@ -127,7 +127,6 @@ const PlaylistPage = () => {
     if (editFormIsDirty) {
       try {
         const formData = new FormData();
-        formData.append("userId", user!._id);
         formData.append("playlistId", playlist!._id);
         formData.append("isPublic", String(data.isPublic));
         formData.append("name", data.name);
@@ -154,7 +153,6 @@ const PlaylistPage = () => {
   async function forkHandler() {
     try {
       const result = await forkRequest({
-        userId: user!._id,
         playlistId: playlist!._id,
       });
 
@@ -168,7 +166,6 @@ const PlaylistPage = () => {
   async function subscribeHandler() {
     try {
       const result = await subscribeRequest({
-        userId: user!._id,
         playlistId: playlist!._id,
       });
     } catch (error) {

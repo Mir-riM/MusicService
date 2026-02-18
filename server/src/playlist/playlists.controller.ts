@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -18,6 +19,7 @@ import { forkDto } from './dto/fork.dto';
 import { EditPlaylistDto } from './dto/editPlaylist.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { MulterFile } from '../common/types/multer.types';
+import type { AuthRequest } from '../common/types/authRequest';
 
 @Controller('playlists')
 export class PlaylistsController {
@@ -27,10 +29,11 @@ export class PlaylistsController {
   @Post()
   @UseInterceptors(FileInterceptor('picture'))
   async create(
+    @Req() req: AuthRequest,
     @UploadedFile() picture: MulterFile | undefined,
     @Body() dto: CreatePlaylistDto,
   ) {
-    return this.playlistsService.create(dto, picture);
+    return this.playlistsService.create(dto, picture, req.user.id);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -41,20 +44,21 @@ export class PlaylistsController {
 
   @UseGuards(JwtAuthGuard)
   @Post('/subscribe')
-  async subscribe(@Body() dto: SubscribeOnPlaylistDto) {
-    return this.playlistsService.subscribe(dto);
+  async subscribe(@Req() req: AuthRequest, @Body() dto: SubscribeOnPlaylistDto) {
+    return this.playlistsService.subscribe(dto, req.user.id);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('/fork')
-  async fork(@Body() dto: forkDto) {
-    return this.playlistsService.fork(dto);
+  async fork(@Req() req: AuthRequest, @Body() dto: forkDto) {
+    return this.playlistsService.fork(dto, req.user.id);
   }
 
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('picture'))
   @Patch('/edit')
   async editPlaylist(
+    @Req() req: AuthRequest,
     @UploadedFile() picture: MulterFile | undefined,
     @Body() dto: EditPlaylistDto,
   ) {
@@ -63,7 +67,7 @@ export class PlaylistsController {
       isPublic: String(dto?.isPublic) === 'true',
     };
 
-    return this.playlistsService.edit(data, picture);
+    return this.playlistsService.edit(data, picture, req.user.id);
   }
 
   @Get('/:id')
@@ -72,14 +76,14 @@ export class PlaylistsController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('/user/:id')
-  async getPlaylistsBySubscriber(@Param('id') userId: string) {
-    return this.playlistsService.getPlaylistsBySubscriber(userId);
+  @Get('/user/me')
+  async getPlaylistsBySubscriber(@Req() req: AuthRequest) {
+    return this.playlistsService.getPlaylistsBySubscriber(req.user.id);
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get(':id/track/link')
-  async getPlaylistTrackLink(@Param('id') userId: string) {
-    return await this.playlistsService.getPlaylistTrackLink(userId);
+  @Get('/track/link/me')
+  async getPlaylistTrackLink(@Req() req: AuthRequest) {
+    return await this.playlistsService.getPlaylistTrackLink(req.user.id);
   }
 }

@@ -12,11 +12,7 @@ import { AuthService } from './auth.service';
 import { AuthDto, RegisterDto } from './dto/auth.dto';
 import type { Request, Response } from 'express';
 import { JwtAuthGuard } from '../common/guards/auth.guard';
-import { JwtPayload } from '../jwt/types/jwtPayload';
-
-export interface AuthRequest extends Request {
-  user: JwtPayload;
-}
+import type { AuthRequest } from '../common/types/authRequest';
 
 @Controller('auth')
 export class AuthController {

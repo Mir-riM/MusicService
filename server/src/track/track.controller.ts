@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -7,19 +6,18 @@ import {
   Param,
   Post,
   Query,
+  Req,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { TrackService } from './track.service';
 import { createTrackDto } from './dto/createTrack.dto';
-import type { ObjectId } from 'mongoose';
-import { CreateCommentDto } from './dto/createComment.dto';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../common/guards/auth.guard';
-import type { TrackLikeDto } from './dto/trackLike.dto';
-import { TrackLikeDocument } from './schemas/trackLike.schema';
+import { TrackLikeDto } from './dto/trackLike.dto';
 import { MulterFile } from '../common/types/multer.types';
+import type { AuthRequest } from '../common/types/authRequest';
 
 @Controller('/tracks')
 export class TrackController {
@@ -47,6 +45,7 @@ export class TrackController {
     ),
   )
   create(
+    @Req() req: AuthRequest,
     @UploadedFiles()
     files: {
       track: MulterFile[];
@@ -56,7 +55,7 @@ export class TrackController {
   ) {
     const { picture, track } = files;
 
-    return this.trackService.create(dto, picture[0], track[0]);
+    return this.trackService.create(dto, picture[0], track[0], req.user.id);
   }
 
   @Get('all')
@@ -70,20 +69,16 @@ export class TrackController {
   }
 
   @Get(':id')
-  getOne(@Param('id') id: ObjectId) {
+  getOne(@Param('id') id: string) {
     return this.trackService.getOne(id);
   }
 
   // в будущем нужно сделать, чтобы удалять мог
   // только тот кто опубликовал трек или модератор
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  delete(@Param('id') id: ObjectId) {
-    return this.trackService.delete(id);
-  }
-
-  @Post('/comment')
-  createComment(@Body() dto: CreateCommentDto) {
-    return this.trackService.createComment(dto);
+  delete(@Req() req: AuthRequest, @Param('id') id: string) {
+    return this.trackService.delete(id, req.user.id, req.user.roles);
   }
 
   // по идее можно сделать api запрос который срабатывает после завершения прослушивания
@@ -95,18 +90,18 @@ export class TrackController {
 
   @UseGuards(JwtAuthGuard)
   @Post('/like')
-  async like(@Body() dto: TrackLikeDto) {
-    return await this.trackService.toggleLike(dto);
+  async like(@Req() req: AuthRequest, @Body() dto: TrackLikeDto) {
+    return await this.trackService.toggleLike(dto, req.user.id);
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('/like/links/:userId')
-  async getLikeLinks(@Param('userId') userId: string) {
-    return await this.trackService.getLikeLinks(userId);
+  @Get('/like/links/me')
+  async getLikeLinks(@Req() req: AuthRequest) {
+    return await this.trackService.getLikeLinks(req.user.id);
   }
   @UseGuards(JwtAuthGuard)
-  @Get('/like/:userId')
-  async getLikeTracks(@Param('userId') userId: string) {
-    return await this.trackService.getLikeTracks(userId);
+  @Get('/like/me')
+  async getLikeTracks(@Req() req: AuthRequest) {
+    return await this.trackService.getLikeTracks(req.user.id);
   }
 }

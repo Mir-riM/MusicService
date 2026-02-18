@@ -1,4 +1,6 @@
-export type TrackLikeDto = {
-  userId: string;
+import { IsMongoId } from 'class-validator';
+
+export class TrackLikeDto {
+  @IsMongoId()
   trackId: string;
-};
+}

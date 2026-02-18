@@ -11,6 +11,9 @@ export class Track {
   @Prop({ required: true })
   author: string;
 
+  @Prop({ required: true, type: mongoose.Schema.Types.ObjectId, ref: 'User' })
+  ownerId: Types.ObjectId;
+
   @Prop({ required: true })
   pictureUrl: string;
 

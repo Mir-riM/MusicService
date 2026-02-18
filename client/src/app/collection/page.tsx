@@ -27,10 +27,10 @@ const CollectionPage = () => {
     }
   }, [initialized, user, router]);
 
-  const { data: playlists } = useGetUserPlaylistsQuery(user?._id ?? "", {
+  const { data: playlists } = useGetUserPlaylistsQuery(undefined, {
     skip: !user,
   });
-  const { data: likedTracks } = useGetTracksLikedUserQuery(user?._id ?? "", {
+  const { data: likedTracks } = useGetTracksLikedUserQuery(undefined, {
     skip: !user,
   });
 

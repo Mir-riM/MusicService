@@ -1,4 +1,6 @@
+import { IsMongoId } from 'class-validator';
+
 export class forkDto {
-  userId: string;
+  @IsMongoId()
   playlistId: string;
 }

@@ -27,7 +27,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     } = useMeQuery();
 
     const { data: userLikedTracks, isLoading: userLikedTracksIsLoading } =
-      useGetTracksLikedListUserQuery(user?._id ?? "", {
+      useGetTracksLikedListUserQuery(undefined, {
         skip: !user?._id,
       });
 

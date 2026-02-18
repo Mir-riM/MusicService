@@ -7,12 +7,7 @@ import {
 } from "../types/entries/playlist";
 
 export type UserAndPlaylistDto = {
-  userId: string;
   playlistId: string;
-};
-export type UserAndTrackDto = {
-  userId: string;
-  trackId: string;
 };
 export type TrackAndPlaylistDto = {
   trackId: string;
@@ -21,7 +16,6 @@ export type TrackAndPlaylistDto = {
 export type PlaylistTrackUserDto = {
   trackId: string;
   playlistId: string;
-  userId: string;
 };
 
 export const playlistsApi = createApi({
@@ -30,18 +24,18 @@ export const playlistsApi = createApi({
   tagTypes: ["playlist", "userPlaylists", "playlistTrackLink"],
 
   endpoints: (builder) => ({
-    getUserPlaylists: builder.query<IPlaylist[], string>({
-      query: (id) => `playlists/user/${id}`,
-      providesTags: (result, error, id) => [{ type: "userPlaylists", id }],
+    getUserPlaylists: builder.query<IPlaylist[], void>({
+      query: () => `playlists/user/me`,
+      providesTags: ["userPlaylists"],
     }),
     getUserPlaylistWithTracks: builder.query<IPlaylistWithTracks, string>({
       query: (id) => `playlists/${id}`,
       providesTags: (result, error, id) => [{ type: "playlist", id }],
     }),
 
-    getPlaylistTrackLink: builder.query<IPlaylistWithTrackLinks[], string>({
-      query: (id) => `playlists/${id}/track/link`,
-      providesTags: (result, error, id) => [{ type: "playlistTrackLink", id }],
+    getPlaylistTrackLink: builder.query<IPlaylistWithTrackLinks[], void>({
+      query: () => `playlists/track/link/me`,
+      providesTags: ["playlistTrackLink"],
     }),
 
     toggleTrackInPlaylist: builder.mutation<
@@ -56,7 +50,7 @@ export const playlistsApi = createApi({
         };
       },
       invalidatesTags: (result, error, dto) => [
-        { type: "playlistTrackLink", id: dto.userId },
+        "playlistTrackLink",
         { type: "playlist", id: dto.playlistId },
       ],
     }),
@@ -100,9 +94,7 @@ export const playlistsApi = createApi({
           body: dto,
         };
       },
-      invalidatesTags: (resut, error, dto) => [
-        { type: "userPlaylists", id: dto.userId },
-      ],
+      invalidatesTags: ["userPlaylists"],
     }),
   }),
 });

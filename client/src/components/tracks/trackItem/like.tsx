@@ -27,7 +27,6 @@ const LikeButtonTrack = ({ track }: LikeButtonTrackProps) => {
   async function likeTrackHandler() {
     try {
       await likeTrackRequest({
-        userId: user!._id,
         trackId: track._id,
       }).unwrap();
     } catch (error) {

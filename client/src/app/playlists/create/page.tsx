@@ -16,6 +16,7 @@ import {
   PlaylistCreateForm,
   playlistCreateSchema,
 } from "../../../shared/schemas/createPlaylistSchema";
+import { enqueueSnackbar } from "notistack";
 
 const PlaylistPage = () => {
   const router = useRouter();
@@ -71,13 +72,12 @@ const PlaylistPage = () => {
     if (createFormIsDirty) {
       try {
         const formData = new FormData();
-        formData.append("ownerId", user!._id);
         formData.append("isPublic", String(data.isPublic));
         formData.append("name", data.name);
         if (data.picture) formData.append("picture", data.picture);
 
         const result = await createRequest(formData).unwrap();
-
+        enqueueSnackbar("Плейлист успешно создан", { variant: "success" });
         router.push(`/playlists/${result?._id}`);
       } catch (error) {
         const apiError = parseApiError(error);

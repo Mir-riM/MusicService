@@ -1,25 +1,24 @@
 import {
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Track, TrackDocument } from './schemas/track.schema';
-import { Comment, CommentDocument } from './schemas/comment.schema';
-import { Model, ObjectId } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { createTrackDto } from './dto/createTrack.dto';
-import { CreateCommentDto } from './dto/createComment.dto';
 import { MinioService } from '../minio/minio.service';
 import { MinioBucket } from '../minio/types/minio';
 import { TrackLikeDto } from './dto/trackLike.dto';
 import { TrackLike } from './schemas/trackLike.schema';
 import { MulterFile } from '../common/types/multer.types';
+import { UserRole } from '../auth/schemas/user.schema';
 
 @Injectable()
 export class TrackService {
   constructor(
     @InjectModel(Track.name) private trackModel: Model<TrackDocument>,
-    @InjectModel(Comment.name) private commentModel: Model<CommentDocument>,
     @InjectModel(TrackLike.name) private trackLikeModel: Model<TrackLike>,
     private minioService: MinioService,
   ) { }
@@ -28,6 +27,7 @@ export class TrackService {
     dto: createTrackDto,
     picture: MulterFile,
     track: MulterFile,
+    ownerId: string,
   ): Promise<Track> {
     try {
       const trackPath = await this.minioService.putObject(
@@ -41,6 +41,7 @@ export class TrackService {
 
       const trackResponce = await this.trackModel.create({
         ...dto,
+        ownerId: new Types.ObjectId(ownerId),
         listenings: 0,
         pictureUrl: picturePath,
         trackUrl: trackPath,
@@ -57,7 +58,7 @@ export class TrackService {
     return tracks;
   }
 
-  async getOne(id: ObjectId): Promise<Track> {
+  async getOne(id: string): Promise<Track> {
     const track = await this.trackModel.findById(id).populate('comments');
 
     if (!track) {
@@ -67,18 +68,28 @@ export class TrackService {
     return track;
   }
 
-  async delete(id: ObjectId): Promise<ObjectId> {
+  async delete(
+    id: string,
+    userId: string,
+    userRoles: string[],
+  ): Promise<{ id: string }> {
+    const track = await this.trackModel.findById(id);
+
+    if (!track) {
+      throw new NotFoundException('Трек не найден');
+    }
+
+    const canDeleteByRole =
+      userRoles.includes(UserRole.ADMIN) || userRoles.includes(UserRole.MODERATOR);
+    const isOwner = track.ownerId.toString() === userId;
+
+    if (!isOwner && !canDeleteByRole) {
+      throw new ForbiddenException('Удалять трек может только владелец или модератор');
+    }
+
     await this.trackModel.findByIdAndDelete(id);
 
-    return id;
-  }
-
-  async createComment(dto: CreateCommentDto): Promise<Comment> {
-    const track = await this.trackModel.findById(dto.trackId);
-    const comment = await this.commentModel.create(dto);
-    track?.comments.push(comment._id);
-    await track?.save();
-    return comment;
+    return { id };
   }
 
   async listen(trackId: string) {
@@ -100,18 +111,21 @@ export class TrackService {
     return tracks;
   }
 
-  async toggleLike(dto: TrackLikeDto): Promise<void> {
+  async toggleLike(dto: TrackLikeDto, userId: string): Promise<void> {
     const existingLike = await this.trackLikeModel.findOne({
-      userId: dto.userId,
+      userId,
       trackId: dto.trackId,
     });
     if (existingLike) {
       await this.trackLikeModel.deleteOne({
-        userId: dto.userId,
+        userId,
         trackId: dto.trackId,
       });
     } else {
-      await this.trackLikeModel.create(dto);
+      await this.trackLikeModel.create({
+        trackId: dto.trackId,
+        userId,
+      });
     }
   }
 

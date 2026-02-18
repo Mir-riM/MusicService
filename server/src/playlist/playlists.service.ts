@@ -35,6 +35,7 @@ export class PlaylistsService {
   async create(
     dto: CreatePlaylistDto,
     picture: MulterFile | undefined,
+    ownerId: string,
   ): Promise<Playlist> {
     let pictureUrl: string | undefined;
 
@@ -45,10 +46,14 @@ export class PlaylistsService {
       );
     }
 
-    const playlist = await this.playlistModel.create({ ...dto, pictureUrl });
+    const playlist = await this.playlistModel.create({
+      ...dto,
+      ownerId,
+      pictureUrl,
+    });
 
     await this.playlistSubscriberModel.create({
-      userId: dto.ownerId,
+      userId: ownerId,
       playlistId: playlist._id.toString(),
     });
 
@@ -153,7 +158,7 @@ export class PlaylistsService {
     return { included: !existingTrack };
   }
 
-  async subscribe(dto: SubscribeOnPlaylistDto): Promise<void> {
+  async subscribe(dto: SubscribeOnPlaylistDto, userId: string): Promise<void> {
     const playlist = await this.playlistModel.findById(dto.playlistId);
 
     if (!playlist) {
@@ -161,7 +166,7 @@ export class PlaylistsService {
     }
 
     const existingSubscription = await this.playlistSubscriberModel.findOne({
-      userId: dto.userId,
+      userId,
       playlistId: dto.playlistId,
     });
 
@@ -183,17 +188,20 @@ export class PlaylistsService {
       if (playlistSubscribers.length > 1) {
         await this.playlistSubscriberModel.deleteOne({
           playlistId: dto.playlistId,
-          userId: dto.userId,
+          userId,
         });
       }
     }
 
     if (!existingSubscription) {
-      await this.playlistSubscriberModel.create(dto);
+      await this.playlistSubscriberModel.create({
+        playlistId: dto.playlistId,
+        userId,
+      });
     }
   }
 
-  async fork(dto: forkDto): Promise<{ playlistId: string }> {
+  async fork(dto: forkDto, userId: string): Promise<{ playlistId: string }> {
     const originPlaylist = await this.playlistModel.findById(dto.playlistId);
 
     if (!originPlaylist) {
@@ -207,7 +215,7 @@ export class PlaylistsService {
     const baseName = `Fork ${originPlaylist.name}`;
 
     const count = await this.playlistModel.countDocuments({
-      ownerId: dto.userId,
+      ownerId: userId,
       name: new RegExp(`^${baseName}`),
     });
 
@@ -217,14 +225,14 @@ export class PlaylistsService {
       isPublic: originPlaylist.isPublic,
       name: forkName,
       type: PlaylistType.FORK,
-      ownerId: dto.userId,
+      ownerId: userId,
       originalPlaylistId: dto.playlistId,
       pictureUrl: originPlaylist.pictureUrl,
     });
 
     await this.playlistSubscriberModel.create({
       playlistId: forkPlaylist._id.toString(),
-      userId: dto.userId,
+      userId,
     });
 
     if (originPlaylistTracks.length) {
@@ -243,6 +251,7 @@ export class PlaylistsService {
   async edit(
     dto: EditPlaylistDto,
     picture: MulterFile | undefined,
+    userId: string,
   ): Promise<void> {
     const updateData: Record<string, any> = Object.fromEntries(
       Object.entries(dto).filter(([, v]) => v !== undefined),
@@ -259,7 +268,7 @@ export class PlaylistsService {
     }
 
     const playlist = await this.playlistModel.findOneAndUpdate(
-      { _id: dto.playlistId, ownerId: dto.userId },
+      { _id: dto.playlistId, ownerId: userId },
       { $set: updateData },
       { new: true },
     );

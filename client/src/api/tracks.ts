@@ -1,7 +1,6 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { IComment, ITrack, ITrackLike } from "../types/entries/track";
 import { baseQueryWithReauth } from "./baseQueryReauth";
-import { UserAndTrackDto } from "./playlists";
 
 export const tracksApi = createApi({
   reducerPath: "tracksApi",
@@ -19,12 +18,12 @@ export const tracksApi = createApi({
     getTracksBySearch: builder.query<ITrack[], string>({
       query: (query) => `/tracks/search?query=${query}`,
     }),
-    getTracksLikedListUser: builder.query<ITrackLike[], string>({
-      query: (id) => `/tracks/like/links/${id}`,
+    getTracksLikedListUser: builder.query<ITrackLike[], void>({
+      query: () => `/tracks/like/links/me`,
       providesTags: ["LikeTrack"],
     }),
-    getTracksLikedUser: builder.query<ITrack[], string>({
-      query: (id) => `/tracks/like/${id}`,
+    getTracksLikedUser: builder.query<ITrack[], void>({
+      query: () => `/tracks/like/me`,
       providesTags: ["LikeTrack"],
     }),
     createTrack: builder.mutation<ITrack, FormData>({
@@ -37,20 +36,48 @@ export const tracksApi = createApi({
       },
       invalidatesTags: ["allTracks"],
     }),
+    deleteTrack: builder.mutation<{ id: string }, string>({
+      query: (trackId) => {
+        return {
+          url: `/tracks/${trackId}`,
+          method: "DELETE",
+        };
+      },
+      invalidatesTags: ["allTracks"],
+    }),
     createComment: builder.mutation<
       IComment,
-      { username: string; text: string; trackId: string }
+      { text: string; trackId: string }
     >({
-      query: ({ username, trackId, text }) => {
+      query: ({ trackId, text }) => {
         return {
-          url: "/tracks/comment",
+          url: "/comments",
           method: "POST",
-          body: { username, trackId, text },
+          body: { trackId, text },
         };
       },
       invalidatesTags: ["Track"],
     }),
-    likeTrack: builder.mutation<void, UserAndTrackDto>({
+    updateComment: builder.mutation<IComment, { commentId: string; text: string }>({
+      query: ({ commentId, text }) => {
+        return {
+          url: `/comments/${commentId}`,
+          method: "PATCH",
+          body: { text },
+        };
+      },
+      invalidatesTags: ["Track"],
+    }),
+    deleteComment: builder.mutation<{ id: string }, { commentId: string }>({
+      query: ({ commentId }) => {
+        return {
+          url: `/comments/${commentId}`,
+          method: "DELETE",
+        };
+      },
+      invalidatesTags: ["Track"],
+    }),
+    likeTrack: builder.mutation<void, { trackId: string }>({
       query: (dto) => {
         return {
           url: "/tracks/like",
@@ -70,6 +97,9 @@ export const {
   useGetTracksLikedUserQuery,
   useGetTracksLikedListUserQuery,
   useCreateTrackMutation,
+  useDeleteTrackMutation,
   useCreateCommentMutation,
+  useUpdateCommentMutation,
+  useDeleteCommentMutation,
   useLikeTrackMutation,
 } = tracksApi;
