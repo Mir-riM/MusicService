@@ -29,7 +29,10 @@ import {
   useSubscribePlaylistMutation,
 } from "../../../api/playlists";
 import { ITrack } from "../../../types/entries/track";
-import { PlaylistEditForm, playlistEditSchema } from "../../../shared/schemas/playlistEditSchema";
+import {
+  PlaylistEditForm,
+  playlistEditSchema,
+} from "../../../shared/schemas/playlistEditSchema";
 import { applyApiErrorToForm } from "../../../shared/errors/apply-api-error-to-form";
 import { parseApiError } from "../../../shared/errors/parse-api-error";
 import { useAppSelector } from "../../../hooks/store";
@@ -66,12 +69,10 @@ const PlaylistPage = () => {
       offset: tracksPagination.offset,
     });
 
-  const {
-    data: subscriptionStatus,
-    isLoading: subscriptionStatusIsLoading,
-  } = useGetPlaylistSubscriptionStatusQuery(params.id, {
-    skip: !user?._id,
-  });
+  const { data: subscriptionStatus, isLoading: subscriptionStatusIsLoading } =
+    useGetPlaylistSubscriptionStatusQuery(params.id, {
+      skip: !user?._id,
+    });
 
   const isSubscribed = useMemo(
     () => !!subscriptionStatus?.isSubscribed,
@@ -407,7 +408,7 @@ const PlaylistPage = () => {
       <div className="mt-10">
         {tracksPagination.items.length ? (
           <>
-            <TrackList tracks={tracksPagination.items} searchEnabled={false} />
+            <TrackList tracks={tracksPagination.items} />
             {tracksPagination.hasMore && (
               <div className="text-center mt-5">
                 <Button variant="outlined" onClick={loadMoreTracksHandler}>

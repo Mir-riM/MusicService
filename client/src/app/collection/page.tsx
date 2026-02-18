@@ -68,7 +68,7 @@ const CollectionPage = () => {
           <h3 className="font-2xl font-bold">Понравившиеся</h3>
           {likedPagination.items.length > 0 ? (
             <>
-              <TrackList tracks={likedPagination.items} searchEnabled={false} />
+              <TrackList tracks={likedPagination.items} />
               {likedPagination.hasMore && (
                 <div className="text-center">
                   <Button variant="outlined" onClick={likedPagination.loadMore}>
