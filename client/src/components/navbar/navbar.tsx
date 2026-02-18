@@ -20,7 +20,7 @@ import { ChevronLeft } from "@mui/icons-material";
 import { CustomIcon } from "../icon/icon";
 import { ICONS } from "../icon/iconRegistry";
 import { useAppDispatch, useAppSelector } from "../../hooks/store";
-import { Divider } from "@mui/material";
+import { Button, Divider } from "@mui/material";
 import { logout } from "../../store/slices/auth";
 import { useLogoutMutation } from "../../api/auth";
 
@@ -32,8 +32,6 @@ interface AppBarProps extends MuiAppBarProps {
 
 const menuItems: { name: string; path: string; icon: keyof typeof ICONS }[] = [
   { name: "Главная", path: "/", icon: "Home" },
-  { name: "Треки", path: "/tracks", icon: "MusicNote" },
-  { name: "Добавить трек", path: "/tracks/create", icon: "PlaylistAdd" },
   { name: "Коллекции", path: "/collection", icon: "User" },
 ];
 
@@ -135,8 +133,15 @@ export default function Navbar() {
             )}
           </IconButton>
         </DrawerHeader>
-        <List className="flex justify-between flex-col">
-          <div>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            height: "100%",
+          }}
+        >
+          <List>
             {menuItems.map(({ name, path, icon }, index) => (
               <ListItem
                 key={index}
@@ -152,35 +157,42 @@ export default function Navbar() {
               </ListItem>
             ))}
             <Divider />
-          </div>
+          </List>
 
-          {user ? (
-            <ListItem
-              onClick={() => {
-                dispatch(logout());
-                logoutRequest();
-                router.push("/auth");
-              }}
-              disablePadding
-            >
-              <ListItemButton>
-                <ListItemIcon>
-                  <CustomIcon muiName={"ExitToApp"} />
-                </ListItemIcon>
-                <ListItemText primary={"Выйти"} />
-              </ListItemButton>
-            </ListItem>
-          ) : (
-            <ListItem onClick={() => router.push("/auth")} disablePadding>
-              <ListItemButton>
-                <ListItemIcon>
-                  <CustomIcon muiName={"Login"} />
-                </ListItemIcon>
-                <ListItemText primary={"Войти"} />
-              </ListItemButton>
-            </ListItem>
-          )}
-        </List>
+          <Box sx={{ px: 2, pb: 2 }}>
+            <Divider sx={{ mb: 2 }} />
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+              <CustomIcon muiName={"User"} />
+              <Typography variant="body2" className="break-all">
+                {user?.login ?? "Гость"}
+              </Typography>
+            </Box>
+
+            {user ? (
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<CustomIcon muiName={"ExitToApp"} />}
+                onClick={() => {
+                  dispatch(logout());
+                  logoutRequest();
+                  router.push("/auth");
+                }}
+              >
+                Выйти
+              </Button>
+            ) : (
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<CustomIcon muiName={"Login"} />}
+                onClick={() => router.push("/auth")}
+              >
+                Войти
+              </Button>
+            )}
+          </Box>
+        </Box>
       </Drawer>
     </Box>
   );

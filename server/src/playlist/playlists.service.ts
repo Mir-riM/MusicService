@@ -49,10 +49,19 @@ export class PlaylistsService {
       return new Map();
     }
 
+    const objectIds = playlistIds
+      .map((id) => id.toString())
+      .filter((id) => mongoose.Types.ObjectId.isValid(id))
+      .map((id) => new mongoose.Types.ObjectId(id));
+
+    if (objectIds.length === 0) {
+      return new Map();
+    }
+
     const counts = await this.playlistSubscriberModel.aggregate([
       {
         $match: {
-          playlistId: { $in: playlistIds },
+          playlistId: { $in: objectIds },
         },
       },
       {
@@ -64,7 +73,10 @@ export class PlaylistsService {
     ]);
 
     return new Map(
-      counts.map((item: { _id: string; count: number }) => [item._id, item.count]),
+      counts.map((item: { _id: mongoose.Types.ObjectId; count: number }) => [
+        item._id.toString(),
+        item.count,
+      ]),
     );
   }
 
@@ -212,6 +224,18 @@ export class PlaylistsService {
         },
       },
     ]);
+  }
+
+  async isUserSubscribed(
+    playlistId: string,
+    userId: string,
+  ): Promise<{ isSubscribed: boolean }> {
+    const existingSubscription = await this.playlistSubscriberModel.exists({
+      playlistId,
+      userId,
+    });
+
+    return { isSubscribed: !!existingSubscription };
   }
 
   async toggleTrackInPlaylist(

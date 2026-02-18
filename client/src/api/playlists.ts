@@ -22,7 +22,7 @@ export type PlaylistTrackUserDto = {
 export const playlistsApi = createApi({
   baseQuery: baseQueryWithReauth,
   reducerPath: "/playlistsApi",
-  tagTypes: ["playlist", "userPlaylists", "playlistTrackLink"],
+  tagTypes: ["playlist", "userPlaylists", "playlistTrackLink", "playlistSubscriptionStatus"],
 
   endpoints: (builder) => ({
     getUserPlaylists: builder.query<
@@ -43,6 +43,12 @@ export const playlistsApi = createApi({
       query: ({ id, limit = 20, offset = 0 }) =>
         `playlists/${id}?limit=${limit}&offset=${offset}`,
       providesTags: (result, error, arg) => [{ type: "playlist", id: arg.id }],
+    }),
+    getPlaylistSubscriptionStatus: builder.query<{ isSubscribed: boolean }, string>({
+      query: (playlistId) => `playlists/${playlistId}/subscription/me`,
+      providesTags: (result, error, playlistId) => [
+        { type: "playlistSubscriptionStatus", id: playlistId },
+      ],
     }),
 
     getPlaylistTrackLink: builder.query<IPlaylistWithTrackLinks[], void>({
@@ -115,7 +121,11 @@ export const playlistsApi = createApi({
           body: dto,
         };
       },
-      invalidatesTags: ["userPlaylists"],
+      invalidatesTags: (result, error, dto) => [
+        "userPlaylists",
+        { type: "playlist", id: dto.playlistId },
+        { type: "playlistSubscriptionStatus", id: dto.playlistId },
+      ],
     }),
   }),
 });
@@ -123,6 +133,7 @@ export const playlistsApi = createApi({
 export const {
   useGetUserPlaylistsQuery,
   useGetUserPlaylistWithTracksQuery,
+  useGetPlaylistSubscriptionStatusQuery,
   useGetPlaylistTrackLinkQuery,
   useToggleTrackInPlaylistMutation,
   useEditPlaylistMutation,

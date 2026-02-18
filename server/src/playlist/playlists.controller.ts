@@ -79,6 +79,12 @@ export class PlaylistsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('/:id/subscription/me')
+  async getSubscriptionStatus(@Param('id') id: string, @Req() req: AuthRequest) {
+    return this.playlistsService.isUserSubscribed(id, req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get('/user/me')
   async getPlaylistsBySubscriber(
     @Req() req: AuthRequest,

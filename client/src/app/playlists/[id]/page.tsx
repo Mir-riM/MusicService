@@ -24,7 +24,7 @@ import {
   useDeletePlaylistMutation,
   useEditPlaylistMutation,
   useForkPlaylistMutation,
-  useGetUserPlaylistsQuery,
+  useGetPlaylistSubscriptionStatusQuery,
   useGetUserPlaylistWithTracksQuery,
   useSubscribePlaylistMutation,
 } from "../../../api/playlists";
@@ -66,16 +66,16 @@ const PlaylistPage = () => {
       offset: tracksPagination.offset,
     });
 
-  const { data: allUserPlaylists } = useGetUserPlaylistsQuery(
-    { limit: 1000, offset: 0 },
-    {
-      skip: !user?._id,
-    },
-  );
+  const {
+    data: subscriptionStatus,
+    isLoading: subscriptionStatusIsLoading,
+  } = useGetPlaylistSubscriptionStatusQuery(params.id, {
+    skip: !user?._id,
+  });
 
   const isSubscribed = useMemo(
-    () => allUserPlaylists?.items?.some((item) => item._id === playlist?._id),
-    [allUserPlaylists?.items, playlist?._id],
+    () => !!subscriptionStatus?.isSubscribed,
+    [subscriptionStatus?.isSubscribed],
   );
 
   const [editRequest, { isLoading: editRequestIsLoading }] =
@@ -106,7 +106,9 @@ const PlaylistPage = () => {
 
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [confirmForkOpen, setConfirmForkOpen] = useState(false);
-  const isOwner = playlist?.ownerId === user?._id;
+  const isOwner = Boolean(
+    playlist?.ownerId && user?._id && playlist.ownerId === user._id,
+  );
 
   const {
     register: editForm,
@@ -380,9 +382,13 @@ const PlaylistPage = () => {
             onClick={() => subscribeHandler()}
             variant="outlined"
             startIcon={isSubscribed ? <Unsubscribe /> : <Subscriptions />}
-            disabled={subscribeRequestIsLoading}
+            disabled={subscribeRequestIsLoading || subscriptionStatusIsLoading}
           >
-            {isSubscribed ? "Отписаться" : "Подписаться"}
+            {subscriptionStatusIsLoading
+              ? "Проверка..."
+              : isSubscribed
+                ? "Отписаться"
+                : "Подписаться"}
           </Button>
           {isOwner && (
             <Button
