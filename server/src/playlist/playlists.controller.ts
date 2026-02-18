@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -85,5 +86,11 @@ export class PlaylistsController {
   @Get('/track/link/me')
   async getPlaylistTrackLink(@Req() req: AuthRequest) {
     return await this.playlistsService.getPlaylistTrackLink(req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('/:id')
+  async deletePlaylist(@Req() req: AuthRequest, @Param('id') playlistId: string) {
+    return this.playlistsService.delete(playlistId, req.user.id);
   }
 }

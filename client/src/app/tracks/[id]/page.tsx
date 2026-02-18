@@ -14,6 +14,7 @@ import { IComment } from "../../../types/entries/track";
 import { useAppSelector } from "../../../hooks/store";
 import { parseApiError } from "../../../shared/errors/parse-api-error";
 import { enqueueSnackbar } from "notistack";
+import ConfirmDialog from "../../../components/confirmDialog/confirmDialog";
 
 const TrackPage = () => {
   const params = useParams<{ id: string }>();
@@ -22,6 +23,8 @@ const TrackPage = () => {
   const [commentText, setCommentText] = useState<string>("");
   const [editCommentText, setEditCommentText] = useState<string>("");
   const [isEditingOwnComment, setIsEditingOwnComment] = useState<boolean>(false);
+  const [confirmDeleteCommentOpen, setConfirmDeleteCommentOpen] =
+    useState<boolean>(false);
 
   const { data: track, isLoading } = useGetTrackByIdQuery(params.id);
   const [createCommentRequest, { isLoading: createCommentIsLoading }] =
@@ -99,6 +102,7 @@ const TrackPage = () => {
       }).unwrap();
       setEditCommentText("");
       setIsEditingOwnComment(false);
+      setConfirmDeleteCommentOpen(false);
     } catch (error) {
       const apiError = parseApiError(error);
       enqueueSnackbar(
@@ -214,7 +218,7 @@ const TrackPage = () => {
                           )}
 
                           <IconButton
-                            onClick={() => deleteComment()}
+                            onClick={() => setConfirmDeleteCommentOpen(true)}
                             disabled={deleteCommentIsLoading}
                             size="small"
                             color="error"
@@ -250,6 +254,17 @@ const TrackPage = () => {
       ) : (
         <div className="text-zinc-400">Трек не найден</div>
       )}
+      <ConfirmDialog
+        open={confirmDeleteCommentOpen}
+        title="Удалить комментарий?"
+        description="Вы уверены, что хотите удалить комментарий? Это действие нельзя отменить."
+        onConfirm={deleteComment}
+        onClose={() => setConfirmDeleteCommentOpen(false)}
+        confirmText="Удалить"
+        cancelText="Отмена"
+        loading={deleteCommentIsLoading}
+        confirmColor="error"
+      />
     </MainLayout>
   );
 };

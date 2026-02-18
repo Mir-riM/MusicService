@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  DeleteOutline,
   Edit,
   ForkLeft,
   MusicNote,
@@ -20,6 +21,7 @@ import MainLayout from "../../../layouts/MainLayout";
 import TrackList from "../../../components/tracks/trackList";
 import FileUpload from "../../../components/fileUpload/fileUpload";
 import {
+  useDeletePlaylistMutation,
   useEditPlaylistMutation,
   useForkPlaylistMutation,
   useGetUserPlaylistsQuery,
@@ -31,6 +33,8 @@ import { PlaylistEditForm, playlistEditSchema } from "../../../shared/schemas/pl
 import { applyApiErrorToForm } from "../../../shared/errors/apply-api-error-to-form";
 import { parseApiError } from "../../../shared/errors/parse-api-error";
 import { useAppSelector } from "../../../hooks/store";
+import { enqueueSnackbar } from "notistack";
+import ConfirmDialog from "../../../components/confirmDialog/confirmDialog";
 
 const PlaylistPage = () => {
   const router = useRouter();
@@ -61,12 +65,17 @@ const PlaylistPage = () => {
 
   const [editRequest, { isLoading: editRequestIsLoading }] =
     useEditPlaylistMutation();
+  const [deleteRequest, { isLoading: deleteRequestIsLoading }] =
+    useDeletePlaylistMutation();
   const [forkRequest, { isLoading: forkRequestIsLoading }] =
     useForkPlaylistMutation();
   const [subscribeRequest, { isLoading: subscribeRequestIsLoading }] =
     useSubscribePlaylistMutation();
 
   const [tracks, setTracks] = useState<ITrack[]>([]);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [confirmForkOpen, setConfirmForkOpen] = useState(false);
+  const isOwner = playlist?.ownerId === user?._id;
 
   const {
     register: editForm,
@@ -154,23 +163,43 @@ const PlaylistPage = () => {
     try {
       const result = await forkRequest({
         playlistId: playlist!._id,
-      });
+      }).unwrap();
+      setConfirmForkOpen(false);
+      enqueueSnackbar("Плейлист успешно форкнут", { variant: "success" });
 
-      router.push(`/playlists/${result.data?.playlistId}`);
+      router.push(`/playlists/${result.playlistId}`);
     } catch (error) {
       const apiError = parseApiError(error);
-      throw new Error(apiError?.message);
+      enqueueSnackbar(apiError?.message || "Произошла ошибка", {
+        variant: "error",
+      });
     }
   }
 
   async function subscribeHandler() {
     try {
-      const result = await subscribeRequest({
+      await subscribeRequest({
         playlistId: playlist!._id,
-      });
+      }).unwrap();
     } catch (error) {
       const apiError = parseApiError(error);
-      throw new Error(apiError?.message);
+      enqueueSnackbar(apiError?.message || "Произошла ошибка", {
+        variant: "error",
+      });
+    }
+  }
+
+  async function deletePlaylistHandler() {
+    try {
+      await deleteRequest(playlist!._id).unwrap();
+      enqueueSnackbar("Плейлист удален", { variant: "info" });
+      setConfirmDeleteOpen(false);
+      router.push("/collection");
+    } catch (error) {
+      const apiError = parseApiError(error);
+      enqueueSnackbar(apiError?.message || "Произошла ошибка", {
+        variant: "error",
+      });
     }
   }
 
@@ -277,20 +306,22 @@ const PlaylistPage = () => {
                   Сохранить
                 </Button>
               )}
-              <Button
-                variant="outlined"
-                startIcon={mode === "view" ? <Edit /> : <Cancel />}
-                onClick={() => {
-                  reset({
-                    name: playlist?.name,
-                    isPublic: playlist?.isPublic,
-                    picture: undefined,
-                  });
-                  setMode((m) => (m === "view" ? "edit" : "view"));
-                }}
-              >
-                {mode === "view" ? "Редактировать" : "Отменить"}
-              </Button>
+              {isOwner && (
+                <Button
+                  variant="outlined"
+                  startIcon={mode === "view" ? <Edit /> : <Cancel />}
+                  onClick={() => {
+                    reset({
+                      name: playlist?.name,
+                      isPublic: playlist?.isPublic,
+                      picture: undefined,
+                    });
+                    setMode((m) => (m === "view" ? "edit" : "view"));
+                  }}
+                >
+                  {mode === "view" ? "Редактировать" : "Отменить"}
+                </Button>
+              )}
             </div>
             {editPlaylistErrors.root && (
               <p className="text-red-500 text-sm text-center">
@@ -302,7 +333,7 @@ const PlaylistPage = () => {
 
           <Button
             variant="outlined"
-            onClick={() => forkHandler()}
+            onClick={() => setConfirmForkOpen(true)}
             startIcon={<ForkLeft />}
             disabled={forkRequestIsLoading}
           >
@@ -317,6 +348,17 @@ const PlaylistPage = () => {
           >
             {isSubscribed ? "Отписаться" : "Подписаться"}
           </Button>
+          {isOwner && (
+            <Button
+              onClick={() => setConfirmDeleteOpen(true)}
+              variant="outlined"
+              color="error"
+              startIcon={<DeleteOutline />}
+              disabled={deleteRequestIsLoading}
+            >
+              Удалить плейлист
+            </Button>
+          )}
         </div>
       </form>
 
@@ -327,6 +369,27 @@ const PlaylistPage = () => {
           <p>В этом плейлисте пока нет треков…</p>
         )}
       </div>
+      <ConfirmDialog
+        open={confirmForkOpen}
+        title="Форкнуть плейлист?"
+        description="Вы уверены, что хотите создать форк этого плейлиста?"
+        onConfirm={forkHandler}
+        onClose={() => setConfirmForkOpen(false)}
+        confirmText="Форкнуть"
+        cancelText="Отмена"
+        loading={forkRequestIsLoading}
+      />
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        title="Удалить плейлист?"
+        description="Вы уверены, что хотите удалить плейлист? Это действие нельзя отменить."
+        onConfirm={deletePlaylistHandler}
+        onClose={() => setConfirmDeleteOpen(false)}
+        confirmText="Удалить"
+        cancelText="Отмена"
+        loading={deleteRequestIsLoading}
+        confirmColor="error"
+      />
     </MainLayout>
   );
 };

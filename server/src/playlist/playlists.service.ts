@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import {
   Playlist,
@@ -171,26 +171,10 @@ export class PlaylistsService {
     });
 
     if (existingSubscription) {
-      const playlistSubscribers = await this.playlistSubscriberModel.find({
+      await this.playlistSubscriberModel.deleteOne({
         playlistId: dto.playlistId,
+        userId,
       });
-
-      if (playlistSubscribers.length === 1) {
-        await this.playlistSubscriberModel.deleteMany({
-          playlistId: dto.playlistId,
-        });
-        await this.playlistTrackModel.deleteMany({
-          playlistId: dto.playlistId,
-        });
-        await this.playlistModel.findByIdAndDelete(dto.playlistId);
-      }
-
-      if (playlistSubscribers.length > 1) {
-        await this.playlistSubscriberModel.deleteOne({
-          playlistId: dto.playlistId,
-          userId,
-        });
-      }
     }
 
     if (!existingSubscription) {
@@ -285,5 +269,27 @@ export class PlaylistsService {
         MinioBucket.PLAYLISTS,
       );
     }
+  }
+
+  async delete(playlistId: string, userId: string): Promise<{ id: string }> {
+    const playlist = await this.playlistModel.findById(playlistId);
+
+    if (!playlist) {
+      throw new NotFoundException('Playlist not found');
+    }
+
+    if (playlist.ownerId.toString() !== userId) {
+      throw new ForbiddenException('Удалять плейлист может только владелец');
+    }
+
+    await this.playlistSubscriberModel.deleteMany({ playlistId });
+    await this.playlistTrackModel.deleteMany({ playlistId });
+    await this.playlistModel.findByIdAndDelete(playlistId);
+
+    if (playlist.pictureUrl) {
+      await this.minioService.deleteObject(playlist.pictureUrl, MinioBucket.PLAYLISTS);
+    }
+
+    return { id: playlistId };
   }
 }

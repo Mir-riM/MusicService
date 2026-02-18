@@ -76,6 +76,15 @@ export const playlistsApi = createApi({
         };
       },
     }),
+    deletePlaylist: builder.mutation<{ id: string }, string>({
+      query: (playlistId) => {
+        return {
+          url: `/playlists/${playlistId}`,
+          method: "DELETE",
+        };
+      },
+      invalidatesTags: ["userPlaylists"],
+    }),
 
     forkPlaylist: builder.mutation<{ playlistId: string }, UserAndPlaylistDto>({
       query: (dto) => {
@@ -106,6 +115,7 @@ export const {
   useToggleTrackInPlaylistMutation,
   useEditPlaylistMutation,
   useCreatePlaylistMutation,
+  useDeletePlaylistMutation,
   useForkPlaylistMutation,
   useSubscribePlaylistMutation,
 } = playlistsApi;

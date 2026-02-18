@@ -28,6 +28,7 @@ import { enqueueSnackbar } from "notistack";
 import { ApiError } from "../../../types/errors/apiError.types";
 import { ITrack } from "../../../types/entries/track";
 import { UserRole } from "../../../types/entries/user";
+import ConfirmDialog from "../../confirmDialog/confirmDialog";
 
 export type TrackMenuProps = {
   track: ITrack;
@@ -88,6 +89,7 @@ export default function TrackMenu({ track }: TrackMenuProps) {
   );
 
   const [expanded, setExpanded] = React.useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = React.useState(false);
 
   const handleExpandClick = (e: React.MouseEvent<HTMLElement>) => {
     e.stopPropagation();
@@ -119,6 +121,7 @@ export default function TrackMenu({ track }: TrackMenuProps) {
     try {
       await deleteTrackRequest(track._id).unwrap();
       handleClose();
+      setConfirmDeleteOpen(false);
       enqueueSnackbar("Трек удален", { variant: "info" });
     } catch (error) {
       let apiError: ApiError | null | { message: string } =
@@ -173,7 +176,7 @@ export default function TrackMenu({ track }: TrackMenuProps) {
             className="flex gap-2"
             disabled={deleteTrackRequestIsLoading}
             onClick={() => {
-              deleteTrackHandler();
+              setConfirmDeleteOpen(true);
             }}
           >
             <Delete fontSize="small" />
@@ -257,6 +260,17 @@ export default function TrackMenu({ track }: TrackMenuProps) {
           </Grow>
         )}
       </Popper>
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        title="Удалить трек?"
+        description="Вы уверены, что хотите удалить трек? Это действие нельзя отменить."
+        onConfirm={deleteTrackHandler}
+        onClose={() => setConfirmDeleteOpen(false)}
+        confirmText="Удалить"
+        cancelText="Отмена"
+        loading={deleteTrackRequestIsLoading}
+        confirmColor="error"
+      />
     </div>
   );
 }
