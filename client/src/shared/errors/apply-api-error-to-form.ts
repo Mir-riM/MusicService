@@ -1,5 +1,5 @@
 import { FieldValues, UseFormSetError } from "react-hook-form";
-import { ApiError } from "../../types/errors/api-error.types";
+import { ApiError } from "../../types/errors/apiError.types";
 
 export function applyApiErrorToForm<T extends FieldValues>(
   apiError: ApiError,

@@ -24,7 +24,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { parseApiError } from "../../../shared/errors/parse-api-error";
 import { enqueueSnackbar } from "notistack";
-import { ApiError } from "../../../types/errors/api-error.types";
+import { ApiError } from "../../../types/errors/apiError.types";
 import { ITrack } from "../../../types/entries/track";
 
 export type TrackMenuProps = {

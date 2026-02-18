@@ -12,17 +12,18 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { TrackService } from './track.service';
-import { createTrackDto, MulterFile } from './dto/createTrack.dto';
+import { createTrackDto } from './dto/createTrack.dto';
 import type { ObjectId } from 'mongoose';
 import { CreateCommentDto } from './dto/createComment.dto';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../common/guards/auth.guard';
 import type { TrackLikeDto } from './dto/trackLike.dto';
 import { TrackLikeDocument } from './schemas/trackLike.schema';
+import { MulterFile } from '../common/types/multer.types';
 
 @Controller('/tracks')
 export class TrackController {
-  constructor(private trackService: TrackService) {}
+  constructor(private trackService: TrackService) { }
 
   @UseGuards(JwtAuthGuard)
   @Post()

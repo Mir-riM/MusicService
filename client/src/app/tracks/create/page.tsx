@@ -1,14 +1,14 @@
 "use client";
 import { useState } from "react";
-import StepWrapper from "../../../components/step-wrapper/step-wrapper";
+import StepWrapper from "../../../components/stepWrapper/stepWrapper";
 import MainLayout from "../../../layouts/MainLayout";
 import { Button, Card, Grid, TextField } from "@mui/material";
-import FileUpload from "../../../components/file-upload/file-upload";
+import FileUpload from "../../../components/fileUpload/fileUpload";
 import { useCreateTrackMutation } from "../../../api/tracks";
 import { useRouter } from "next/navigation";
 import { AuthGuard } from "../../../guards/authGuard";
 import { Controller, useForm } from "react-hook-form";
-import { CreateTrackForm, stepSchemas } from "./createTrackFrom";
+import { CreateTrackForm, stepSchemas } from "../../../shared/schemas/createTrackFrom";
 
 const CreateTrack = () => {
   const router = useRouter();

@@ -18,7 +18,7 @@ import ListItemText from "@mui/material/ListItemText";
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronLeft } from "@mui/icons-material";
 import { CustomIcon } from "../icon/icon";
-import { ICONS } from "../icon/icon-registry";
+import { ICONS } from "../icon/iconRegistry";
 import { useAppDispatch, useAppSelector } from "../../hooks/store";
 import { Divider } from "@mui/material";
 import { logout } from "../../store/slices/auth";

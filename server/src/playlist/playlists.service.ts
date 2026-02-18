@@ -15,7 +15,7 @@ import { forkDto } from './dto/fork.dto';
 import { EditPlaylistDto } from './dto/editPlaylist.dto';
 import { MinioService } from '../minio/minio.service';
 import { MinioBucket } from '../minio/types/minio';
-import { MulterFile } from '../track/dto/createTrack.dto';
+import { MulterFile } from '../common/types/multer.types';
 
 export interface PlaylistWithTracks extends Playlist {
   tracks: PlaylistTracks[];
@@ -30,7 +30,7 @@ export class PlaylistsService {
     @InjectModel(PlaylistSubscription.name)
     private playlistSubscriberModel: Model<PlaylistSubscription>,
     private minioService: MinioService,
-  ) {}
+  ) { }
 
   async create(
     dto: CreatePlaylistDto,

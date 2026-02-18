@@ -17,11 +17,11 @@ import { SubscribeOnPlaylistDto } from './dto/subscribeOnPlaylist.dto';
 import { forkDto } from './dto/fork.dto';
 import { EditPlaylistDto } from './dto/editPlaylist.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { MulterFile } from '../track/dto/createTrack.dto';
+import { MulterFile } from '../common/types/multer.types';
 
 @Controller('playlists')
 export class PlaylistsController {
-  constructor(private readonly playlistsService: PlaylistsService) {}
+  constructor(private readonly playlistsService: PlaylistsService) { }
 
   @UseGuards(JwtAuthGuard)
   @Post()

@@ -7,7 +7,7 @@ import { useEffect, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import MainLayout from "../../../layouts/MainLayout";
-import FileUpload from "../../../components/file-upload/file-upload";
+import FileUpload from "../../../components/fileUpload/fileUpload";
 import { useCreatePlaylistMutation } from "../../../api/playlists";
 import { applyApiErrorToForm } from "../../../shared/errors/apply-api-error-to-form";
 import { parseApiError } from "../../../shared/errors/parse-api-error";
@@ -15,7 +15,7 @@ import { useAppSelector } from "../../../hooks/store";
 import {
   PlaylistCreateForm,
   playlistCreateSchema,
-} from "./createPlaylistSchema";
+} from "../../../shared/schemas/createPlaylistSchema";
 
 const PlaylistPage = () => {
   const router = useRouter();

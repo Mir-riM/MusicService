@@ -7,7 +7,7 @@ import {
   useGetAllTracksQuery,
   useGetTracksBySearchQuery,
 } from "../../api/tracks";
-import SearchInput from "../../components/search-input/search-input";
+import SearchInput from "../../components/searchInput/searchInput";
 import { useDebounce } from "../../hooks/useDebounce";
 import { skipToken } from "@reduxjs/toolkit/query/react";
 

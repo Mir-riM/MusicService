@@ -8,7 +8,7 @@ import { HealthModule } from './health/health.module';
 import { MinioModule } from './minio/minio.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthModule } from './jwt/jwt.module';
-import { PlaylistsModule } from './playlists/playlists.module';
+import { PlaylistsModule } from './playlist/playlists.module';
 
 @Module({
   controllers: [],

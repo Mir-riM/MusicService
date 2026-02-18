@@ -7,12 +7,13 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Track, TrackDocument } from './schemas/track.schema';
 import { Comment, CommentDocument } from './schemas/comment.schema';
 import { Model, ObjectId } from 'mongoose';
-import { createTrackDto, MulterFile } from './dto/createTrack.dto';
+import { createTrackDto } from './dto/createTrack.dto';
 import { CreateCommentDto } from './dto/createComment.dto';
 import { MinioService } from '../minio/minio.service';
 import { MinioBucket } from '../minio/types/minio';
 import { TrackLikeDto } from './dto/trackLike.dto';
 import { TrackLike } from './schemas/trackLike.schema';
+import { MulterFile } from '../common/types/multer.types';
 
 @Injectable()
 export class TrackService {
@@ -21,7 +22,7 @@ export class TrackService {
     @InjectModel(Comment.name) private commentModel: Model<CommentDocument>,
     @InjectModel(TrackLike.name) private trackLikeModel: Model<TrackLike>,
     private minioService: MinioService,
-  ) {}
+  ) { }
 
   async create(
     dto: createTrackDto,

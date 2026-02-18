@@ -6,8 +6,8 @@ import {
 } from '@aws-sdk/client-s3';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { MinioBucket } from './types/minio';
-import { MulterFile } from '../track/dto/createTrack.dto';
 import * as uuid from 'uuid';
+import { MulterFile } from '../common/types/multer.types';
 
 @Injectable()
 export class MinioService {

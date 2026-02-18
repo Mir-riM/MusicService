@@ -8,8 +8,7 @@ import { useAppDispatch } from "../../hooks/store";
 import { setUserState } from "../../store/slices/auth";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AuthForm, AuthFormSchema } from "./authFormSchema";
-import { FetchBaseQueryError } from "@reduxjs/toolkit/query/react";
+import { AuthForm, AuthFormSchema } from "../../shared/schemas/authFormSchema";
 import { applyApiErrorToForm } from "../../shared/errors/apply-api-error-to-form";
 import { parseApiError } from "../../shared/errors/parse-api-error";
 

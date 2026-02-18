@@ -1,4 +1,4 @@
-import { ICONS } from "./icon-registry";
+import { ICONS } from "./iconRegistry";
 
 type IconProps = {
   muiName: keyof typeof ICONS;

@@ -18,7 +18,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import MainLayout from "../../../layouts/MainLayout";
 import TrackList from "../../../components/tracks/trackList";
-import FileUpload from "../../../components/file-upload/file-upload";
+import FileUpload from "../../../components/fileUpload/fileUpload";
 import {
   useEditPlaylistMutation,
   useForkPlaylistMutation,
@@ -27,7 +27,7 @@ import {
   useSubscribePlaylistMutation,
 } from "../../../api/playlists";
 import { ITrack } from "../../../types/entries/track";
-import { PlaylistEditForm, playlistEditSchema } from "./playlistEditSchema";
+import { PlaylistEditForm, playlistEditSchema } from "../../../shared/schemas/playlistEditSchema";
 import { applyApiErrorToForm } from "../../../shared/errors/apply-api-error-to-form";
 import { parseApiError } from "../../../shared/errors/parse-api-error";
 import { useAppSelector } from "../../../hooks/store";

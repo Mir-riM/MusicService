@@ -9,7 +9,7 @@ import TrackList from "../../components/tracks/trackList";
 import { AuthGuard } from "../../guards/authGuard";
 import MainLayout from "../../layouts/MainLayout";
 import { useAppSelector } from "../../hooks/store";
-import PlaylistCard from "../../components/playlists/playlist-card";
+import PlaylistCard from "../../components/playlists/playlistCard";
 import { useEffect } from "react";
 import { Card } from "@mui/material";
 import { Add } from "@mui/icons-material";

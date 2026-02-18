@@ -3,7 +3,7 @@
 import { Pause, PlayArrow, VolumeMute, VolumeUp } from "@mui/icons-material";
 import { Card, IconButton } from "@mui/material";
 import { useEffect, useRef } from "react";
-import TrackProgress from "./track-progress";
+import TrackProgress from "./trackProgress";
 import {
   nextTrack,
   pauseTrack,
