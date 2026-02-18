@@ -14,6 +14,7 @@ export interface IPlaylist {
   originalPlaylistId?: string;
   pictureUrl: string;
   isPublic: boolean;
+  subscribersCount?: number;
 }
 
 export interface IPlaylistWithTracks extends IPlaylist {

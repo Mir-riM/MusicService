@@ -77,6 +77,14 @@ export const tracksApi = createApi({
       },
       invalidatesTags: ["Track"],
     }),
+    listenTrack: builder.mutation<void, string>({
+      query: (trackId) => {
+        return {
+          url: `/tracks/${trackId}/listen`,
+          method: "POST",
+        };
+      },
+    }),
     likeTrack: builder.mutation<void, { trackId: string }>({
       query: (dto) => {
         return {
@@ -101,5 +109,6 @@ export const {
   useCreateCommentMutation,
   useUpdateCommentMutation,
   useDeleteCommentMutation,
+  useListenTrackMutation,
   useLikeTrackMutation,
 } = tracksApi;

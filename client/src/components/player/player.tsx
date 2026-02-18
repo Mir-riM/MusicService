@@ -21,9 +21,11 @@ import SkipNextIcon from "@mui/icons-material/SkipNext";
 import RepeatIcon from "@mui/icons-material/Repeat";
 import RepeatOnIcon from "@mui/icons-material/RepeatOn";
 import RepeatOneOnIcon from "@mui/icons-material/RepeatOneOn";
+import { useListenTrackMutation } from "../../api/tracks";
 
 const Player: React.FC = () => {
   const dispatch = useAppDispatch();
+  const [listenTrackRequest] = useListenTrackMutation();
   const {
     queue,
     shuffle,
@@ -37,6 +39,9 @@ const Player: React.FC = () => {
 
   // Создаем элемент аудио
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const listenedTrackIdRef = useRef<string | null>(null);
+  const listenedSecondsRef = useRef(0);
+  const lastPlaybackTimeRef = useRef(0);
 
   useEffect(() => {
     const audio = new Audio();
@@ -51,15 +56,45 @@ const Player: React.FC = () => {
     // при запуске нового трека выставляем настройки на базовые
     // начинаем песню с начала, выставляем громкость
     if (queue && audioRef.current) {
+      const activeTrack = queue[active!];
+      if (!activeTrack) return;
+
+      listenedTrackIdRef.current = null;
+      listenedSecondsRef.current = 0;
+      lastPlaybackTimeRef.current = 0;
+
       // останавливаем трек для защиты от гонок
       audioRef.current.pause();
-      audioRef.current.src = `${process.env.NEXT_PUBLIC_MINIO_URL}/${queue[active!].trackUrl}`;
+      audioRef.current.src = `${process.env.NEXT_PUBLIC_MINIO_URL}/${activeTrack.trackUrl}`;
       audioRef.current.volume = volume / 100;
       audioRef.current.onloadedmetadata = () => {
+        const audio = audioRef.current;
+        if (!audio) return;
+        lastPlaybackTimeRef.current = audio.currentTime;
         dispatch(setDurationTrack(Math.ceil(audioRef.current!.duration)));
       };
       audioRef.current.ontimeupdate = () => {
-        dispatch(setCurrentTimeTrack(Math.ceil(audioRef.current!.currentTime)));
+        const audio = audioRef.current;
+        if (!audio) return;
+
+        dispatch(setCurrentTimeTrack(Math.ceil(audio.currentTime)));
+
+        if (listenedTrackIdRef.current === activeTrack._id) return;
+        if (!Number.isFinite(audio.duration) || audio.duration <= 0) return;
+
+        const delta = audio.currentTime - lastPlaybackTimeRef.current;
+        lastPlaybackTimeRef.current = audio.currentTime;
+
+        // Учитываем только непрерывное проигрывание, а не скачки от перемотки.
+        if (!audio.paused && delta > 0 && delta <= 1.5) {
+          listenedSecondsRef.current += delta;
+        }
+
+        const listenedHalf = listenedSecondsRef.current >= audio.duration / 2;
+        if (listenedHalf) {
+          listenedTrackIdRef.current = activeTrack._id;
+          listenTrackRequest(activeTrack._id);
+        }
       };
 
       // включаем трек
@@ -67,7 +102,7 @@ const Player: React.FC = () => {
     } else {
       audioRef.current = new Audio();
     }
-  }, [active, queue, audioRef.current]);
+  }, [active, queue, audioRef.current, listenTrackRequest]);
 
   // отдельный useEffect для паузы и возобновления трека
   // если isPaused изменился даже в другом месте

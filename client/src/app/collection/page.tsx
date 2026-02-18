@@ -71,6 +71,7 @@ const CollectionPage = () => {
                   id={playlist._id}
                   pictureUrl={playlist.pictureUrl}
                   name={playlist.name}
+                  subscribersCount={playlist.subscribersCount}
                 />
               ))
             ) : (

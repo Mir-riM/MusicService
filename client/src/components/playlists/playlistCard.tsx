@@ -2,15 +2,15 @@
 import { MusicNote } from "@mui/icons-material";
 import { Card } from "@mui/material";
 import { useRouter } from "next/navigation";
-import { id } from "zod/v4/locales";
 
 export type PlaylistCardProps = {
   id: string;
   name: string;
   pictureUrl?: string;
+  subscribersCount?: number;
 };
 
-const PlaylistCard = ({ pictureUrl, name, id }: PlaylistCardProps) => {
+const PlaylistCard = ({ pictureUrl, name, id, subscribersCount = 0 }: PlaylistCardProps) => {
   const router = useRouter();
 
   return (
@@ -32,6 +32,9 @@ const PlaylistCard = ({ pictureUrl, name, id }: PlaylistCardProps) => {
         )}
       </div>
       <h6 className="font-semibold mt-5 text-xl text-center">{name}</h6>
+      <p className="text-sm text-zinc-400 text-center mt-2">
+        Подписчиков: {subscribersCount}
+      </p>
     </Card>
   );
 };

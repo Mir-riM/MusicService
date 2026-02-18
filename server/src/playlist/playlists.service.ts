@@ -19,6 +19,7 @@ import { MulterFile } from '../common/types/multer.types';
 
 export interface PlaylistWithTracks extends Playlist {
   tracks: PlaylistTracks[];
+  subscribersCount: number;
 }
 
 @Injectable()
@@ -31,6 +32,19 @@ export class PlaylistsService {
     private playlistSubscriberModel: Model<PlaylistSubscription>,
     private minioService: MinioService,
   ) { }
+
+  private async getSubscribersCountMap(
+    playlistIds: string[],
+  ): Promise<Map<string, number>> {
+    const counts = await Promise.all(
+      playlistIds.map(async (playlistId) => ({
+        playlistId,
+        count: await this.playlistSubscriberModel.countDocuments({ playlistId }),
+      })),
+    );
+
+    return new Map(counts.map((item) => [item.playlistId, item.count]));
+  }
 
   async create(
     dto: CreatePlaylistDto,
@@ -72,7 +86,11 @@ export class PlaylistsService {
       throw new NotFoundException('Playlist not found');
     }
 
-    return { ...playlist.toObject(), tracks: playlistTracks };
+    const subscribersCount = await this.playlistSubscriberModel.countDocuments({
+      playlistId: id,
+    });
+
+    return { ...playlist.toObject(), tracks: playlistTracks, subscribersCount };
   }
 
   async getPlaylistsBySubscriber(userId: string): Promise<Playlist[]> {
@@ -86,7 +104,14 @@ export class PlaylistsService {
       _id: { $in: playlistIds },
     });
 
-    return playlists;
+    const subscribersCountMap = await this.getSubscribersCountMap(
+      playlists.map((playlist) => playlist._id.toString()),
+    );
+
+    return playlists.map((playlist) => ({
+      ...playlist.toObject(),
+      subscribersCount: subscribersCountMap.get(playlist._id.toString()) ?? 0,
+    }));
   }
 
   async getPlaylistTrackLink(userId: string) {

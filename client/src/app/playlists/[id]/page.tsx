@@ -290,6 +290,9 @@ const PlaylistPage = () => {
                 </>
               )}
             </div>
+            <p className="text-sm text-zinc-400">
+              Подписчиков: {playlist?.subscribersCount ?? 0}
+            </p>
           </div>
         </div>
 

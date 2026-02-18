@@ -2,13 +2,15 @@ import { Search } from "@mui/icons-material";
 import { Input } from "@mui/material";
 
 interface SearchInputProps {
+  value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-const SearchInput = ({ onChange }: SearchInputProps) => {
+const SearchInput = ({ value, onChange }: SearchInputProps) => {
   return (
     <div className="flex relative">
       <Input
+        value={value}
         onChange={onChange}
         placeholder="Введите название трека или имя исполнителя..."
         className="w-full"
